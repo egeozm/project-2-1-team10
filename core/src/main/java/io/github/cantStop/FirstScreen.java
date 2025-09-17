@@ -1,4 +1,4 @@
-package io.github.cantStop;
+package io.github.cantstop;
 
 import com.badlogic.gdx.Screen;
 
