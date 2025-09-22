@@ -1,9 +1,9 @@
-package io.github.cantstop;
+package io.github.cantstop.screens;
 
 import com.badlogic.gdx.Screen;
 
 /** First screen of the application. Displayed after the application is created. */
-public class FirstScreen implements Screen {
+public class MenuScreen implements Screen {
     @Override
     public void show() {
         // Prepare your screen here.
