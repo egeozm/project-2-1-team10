@@ -1,4 +1,4 @@
-package io.github.cantstop.screens;
+package io.github.cantStop.screens;
 
 import com.badlogic.gdx.Screen;
 

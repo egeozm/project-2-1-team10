@@ -1,7 +1,7 @@
-package io.github.cantstop;
+package io.github.cantStop;
 
 import com.badlogic.gdx.Game;
-import io.github.cantstop.screens.MenuScreen;
+import io.github.cantStop.screens.MenuScreen;
 
 /** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
 public class Main extends Game {
