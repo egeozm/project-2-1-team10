@@ -54,6 +54,11 @@ public class PlayScreen implements Screen {
             Arrays.fill(boardState[c], -1);
         }
 
+        // Temporary demo markers so you can see them
+        boardState[0][0] = 0; // column 2, blue perm marker at base
+        boardState[3][1] = 2; // column 5, red perm marker at height 2
+        boardState[5][2] = 4; // column 7, temp marker at height 4
+
         columnWinner = new int[NUM_COLS];
         Arrays.fill(columnWinner, -1);
     }
