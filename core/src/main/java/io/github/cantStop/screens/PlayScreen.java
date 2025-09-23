@@ -12,17 +12,22 @@ import java.util.Arrays;
 public class PlayScreen implements Screen {
 
     // Board shape: 11 columns (sums 2..12), 3 slots (blue perm, red perm, temp)
-    private static final int NUM_COLS  = 11;
+    private static final int NUM_COLS = 11;
     private static final int NUM_SLOTS = 3;
 
     // Layout constants – tune to match your board art
     private static final float ORIGIN_X = 200f; // column 0 x
     private static final float ORIGIN_Y = 100f; // base row y
-    private static final float CELL_W   = 40f;  // x step per column
-    private static final float CELL_H   = 40f;  // y step per height
+    private static final float CELL_W = 40f;  // x step per column
+    private static final float CELL_H = 40f;  // y step per height
 
-    private static float colX(int col)  { return ORIGIN_X + col * CELL_W; }
-    private static float rowY(int step) { return ORIGIN_Y + step * CELL_H; }
+    private static float colX(int col) {
+        return ORIGIN_X + col * CELL_W;
+    }
+
+    private static float rowY(int step) {
+        return ORIGIN_Y + step * CELL_H;
+    }
 
     private SpriteBatch batch;
 
@@ -70,17 +75,17 @@ public class PlayScreen implements Screen {
         assets.loadAll();
 
         // Bind local handles
-        board        = assets.board;
-        blueMarker1  = assets.blueMarker1;
-        blueMarker2  = assets.blueMarker2;
-        blueCross    = assets.blueCross;
-        redMarker1   = assets.redMarker1;
-        redMarker2   = assets.redMarker2;
-        redCross     = assets.redCross;
+        board = assets.board;
+        blueMarker1 = assets.blueMarker1;
+        blueMarker2 = assets.blueMarker2;
+        blueCross = assets.blueCross;
+        redMarker1 = assets.redMarker1;
+        redMarker2 = assets.redMarker2;
+        redCross = assets.redCross;
         diceTextures = assets.diceTextures;
 
         // Set initial marker set: slot 0 = blue perm, slot 1 = red perm, slot 2 = current player's temp
-        markerTextures = new Texture[] { blueMarker1, redMarker1, blueMarker2 }; // blue starts
+        markerTextures = new Texture[]{blueMarker1, redMarker1, blueMarker2}; // blue starts
 
         // Now that textures exist, create dice that depend on them
         dice = new Die[4];
@@ -138,7 +143,7 @@ public class PlayScreen implements Screen {
 
         // 3) Dice
         float diceStartX = 600f; // pick an x far enough from the board
-        float diceY      = 50f;  // height where dice sit
+        float diceY = 50f;  // height where dice sit
 
         for (int i = 0; i < dice.length; i++) {
             batch.draw(dice[i].currentFace(), diceStartX + i * 70f, diceY, 64f, 64f);
@@ -157,16 +162,20 @@ public class PlayScreen implements Screen {
     }
 
     @Override
-    public void resize(int width, int height) {}
+    public void resize(int width, int height) {
+    }
 
     @Override
-    public void pause() {}
+    public void pause() {
+    }
 
     @Override
-    public void resume() {}
+    public void resume() {
+    }
 
     @Override
-    public void hide() {}
+    public void hide() {
+    }
 
     @Override
     public void dispose() {
