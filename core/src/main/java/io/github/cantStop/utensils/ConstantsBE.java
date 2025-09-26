@@ -5,7 +5,7 @@ public final class ConstantsBE {
 
     public static final int COL_MIN = 2;
     public static final int COL_MAX = 12;
-    public static final int NUM_COLS = 11;
+    public static final int NUM_COLS = COL_MAX - COL_MIN + 1;
 
     public static final int MAX_TEMP_RUNNERS = 3;
     public static final int TO_WIN = 3;
