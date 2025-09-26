@@ -6,8 +6,9 @@ import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-
 import java.util.Arrays;
+
+import static io.github.cantStop.utensils.ConstantsBE.*;
 
 public class PlayScreen implements Screen {
 
@@ -46,9 +47,7 @@ public class PlayScreen implements Screen {
 
     private int[] columnWinner; // -1 = nobody, 0 = blue, 1 = red
 
-    private static final int[] MAX_HEIGHT = {
-        3, 5, 7, 9, 11, 13, 11, 9, 7, 5, 3
-    };
+
 
     public PlayScreen(SpriteBatch batch) {
         this.batch = batch;
