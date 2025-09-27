@@ -2,7 +2,6 @@ package io.github.cantStop;
 
 import io.github.cantStop.model.*;
 import io.github.cantStop.rules.Rules;
-import io.github.cantStop.utensils.ConstantsBE;
 
 import java.util.List;
 import java.util.Random;
