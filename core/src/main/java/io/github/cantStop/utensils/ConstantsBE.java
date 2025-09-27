@@ -17,7 +17,7 @@ public final class ConstantsBE {
     // sum - given combination ex. 1+1=2, 1+2=3 ...
 
     // changes sum of dices into the array(board) index
-    public static int sumToCol(int sum) {
+    public static int sumToColumnID(int sum) {
         if (sum < COL_MIN || sum > COL_MAX) throw new IllegalArgumentException("sum out of range");
         return sum - COL_MIN;
     }
@@ -29,7 +29,7 @@ public final class ConstantsBE {
     }
 
     // height of a given column
-    public static int maxHeightForSum(int sum) {
+    public static int maxHeight(int sum) {
         if (sum < COL_MIN || sum > COL_MAX) throw new IllegalArgumentException("sum out of range");
         return MAX_HEIGHT[sum - COL_MIN];
     }

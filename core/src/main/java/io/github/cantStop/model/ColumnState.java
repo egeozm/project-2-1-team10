@@ -31,7 +31,7 @@ public final class ColumnState {
     }
 
     public void lockFor(Player p, int sumForThisColumn) {
-        int max = ConstantsBE.maxHeightForSum(sumForThisColumn);
+        int max = ConstantsBE.maxHeight(sumForThisColumn);
 
         if (isLocked() || permHeightFor(p) < max) {return;}
 
@@ -51,7 +51,7 @@ public final class ColumnState {
     }
 
     public void applyTempAdvance(Player p, int sumForThisColumn) {
-        int max = maxHeightForSum(sumForThisColumn);
+        int max = maxHeight(sumForThisColumn);
         int base = permHeightFor(p);
         int current;
         if (tempHeight == null) {
