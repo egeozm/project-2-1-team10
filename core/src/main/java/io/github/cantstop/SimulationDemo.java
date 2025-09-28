@@ -1,7 +1,7 @@
-package io.github.cantStop;
+package io.github.cantstop;
 
-import io.github.cantStop.model.*;
-import io.github.cantStop.rules.Rules;
+import io.github.cantstop.model.*;
+import io.github.cantstop.rules.Rules;
 
 import java.util.List;
 import java.util.Random;

@@ -1,4 +1,4 @@
-package io.github.cantStop.screens;
+package io.github.cantstop;
 
 import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.Texture;
@@ -20,11 +20,11 @@ public final class GameAssets implements Disposable {
         am.load("board.png", Texture.class);
 
         // Markers
-        am.load("markers/blue1.png", Texture.class);
-        am.load("markers/blue2.png", Texture.class);
+        am.load("markers/blue_marker_1.png", Texture.class);
+        am.load("markers/blue_marker_2.png", Texture.class);
         am.load("markers/blue_cross.png", Texture.class);
-        am.load("markers/red1.png",  Texture.class);
-        am.load("markers/red2.png",  Texture.class);
+        am.load("markers/red_marker_1.png",  Texture.class);
+        am.load("markers/red_marker_2.png",  Texture.class);
         am.load("markers/red_cross.png", Texture.class);
 
         // Dice faces 1..6
@@ -37,11 +37,11 @@ public final class GameAssets implements Disposable {
 
         // Resolve handles
         board       = am.get("board.png", Texture.class);
-        blueMarker1 = am.get("markers/blue1.png", Texture.class);
-        blueMarker2 = am.get("markers/blue2.png", Texture.class);
+        blueMarker1 = am.get("markers/blue_marker_1.png", Texture.class);
+        blueMarker2 = am.get("markers/blue_marker_2.png", Texture.class);
         blueCross   = am.get("markers/blue_cross.png", Texture.class);
-        redMarker1  = am.get("markers/red1.png", Texture.class);
-        redMarker2  = am.get("markers/red2.png", Texture.class);
+        redMarker1  = am.get("markers/red_marker_1.png", Texture.class);
+        redMarker2  = am.get("markers/red_marker_2.png", Texture.class);
         redCross    = am.get("markers/red_cross.png", Texture.class);
 
         diceTextures = new Texture[6];

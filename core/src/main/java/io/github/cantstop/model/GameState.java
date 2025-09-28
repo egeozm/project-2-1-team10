@@ -1,7 +1,7 @@
-package io.github.cantStop.model;
+package io.github.cantstop.model;
 
 //4h
-import io.github.cantStop.utensils.ConstantsBE;
+import io.github.cantstop.utensils.ConstantsBE;
 import java.util.HashSet;
 import java.util.Set;
 

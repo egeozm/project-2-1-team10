@@ -1,25 +1,21 @@
-package io.github.cantStop.screens;
+package io.github.cantstop.screens;
 
-import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.utils.ScreenUtils;
+import io.github.cantstop.Main;
 
 
 /** First screen of the application. Displayed after the application is created. */
 public class MenuScreen implements Screen {
 
-    private final Game game;
-    private final SpriteBatch batch;
-    private final BitmapFont font;
+    private final Main game;
 
-    public MenuScreen(Game game) {
+    public MenuScreen(Main game) {
         this.game = game;
-        this.batch = new SpriteBatch();
-        this.font = new BitmapFont(); // LibGDX default font
     }
 
     @Override
@@ -29,20 +25,35 @@ public class MenuScreen implements Screen {
 
     @Override
     public void render(float delta) {
-        // clear screen
-        Gdx.gl.glClearColor(0, 0, 0, 1);
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+        handleInput();
+        update();
+        draw();
+    }
 
-        batch.begin();
-        font.draw(batch, "Cant Stop", 100, 300);
-        font.draw(batch, "Press ENTER to start", 100, 250);
-        batch.end();
+    public void handleInput() {
 
         // input: ENTER -> switch to PlayScreen
         if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
-            game.setScreen(new PlayScreen(new SpriteBatch()));
+            game.setScreen(new PlayScreen(game));
             dispose();
         }
+    }
+
+    public void update() {
+
+    }
+
+    public void draw() {
+
+        ScreenUtils.clear(0f, 0f, 0f, 1f); // black background
+        game.viewport.apply();
+        game.batch.setProjectionMatrix(game.viewport.getCamera().combined);
+        game.batch.begin();
+
+        game.font.draw(game.batch, "Cant Stop", 100, 300);
+        game.font.draw(game.batch, "Press ENTER to start", 100, 250);
+
+        game.batch.end();
     }
 
     @Override
@@ -71,7 +82,5 @@ public class MenuScreen implements Screen {
 
     @Override
     public void dispose() {
-        batch.dispose();
-        font.dispose();
     }
 }

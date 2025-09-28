@@ -1,4 +1,4 @@
-package io.github.cantStop.utensils;
+package io.github.cantstop.utensils;
 
 public final class ConstantsBE {
     private ConstantsBE() {}

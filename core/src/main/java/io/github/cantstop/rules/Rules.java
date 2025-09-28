@@ -1,7 +1,7 @@
-package io.github.cantStop.rules;
+package io.github.cantstop.rules;
 
-import io.github.cantStop.model.*;
-import io.github.cantStop.utensils.ConstantsBE;
+import io.github.cantstop.model.*;
+import io.github.cantstop.utensils.ConstantsBE;
 
 import java.util.ArrayList;
 import java.util.List;

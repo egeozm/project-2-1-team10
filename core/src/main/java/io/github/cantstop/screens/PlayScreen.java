@@ -1,38 +1,40 @@
-package io.github.cantStop.screens;
+package io.github.cantstop.screens;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.utils.ScreenUtils;
+import io.github.cantstop.Die;
+import io.github.cantstop.GameAssets;
+import io.github.cantstop.Main;
+
 import java.util.Arrays;
 
-import static io.github.cantStop.utensils.ConstantsBE.*;
-
 public class PlayScreen implements Screen {
+
+    private final Main game;
 
     // Board shape: 11 columns (sums 2..12), 3 slots (blue perm, red perm, temp)
     private static final int NUM_COLS = 11;
     private static final int NUM_SLOTS = 3;
 
     // Layout constants – tune to match your board art
-    private static final float ORIGIN_X = 200f; // column 0 x
-    private static final float ORIGIN_Y = 100f; // base row y
-    private static final float CELL_W = 40f;  // x step per column
-    private static final float CELL_H = 40f;  // y step per height
+    private static final float ORIGIN_X = 60f; // column 0 x
+    private static final float ORIGIN_Y = 60f; // base row y
+    private static final float CELL_W = 24f;  // x step per column
+    private static final float CELL_H = 18f;  // y step per height
 
     private static float colX(int col) {
-        return ORIGIN_X + col * CELL_W;
+        return ORIGIN_X + col * CELL_W + 4f;
     }
 
     private static float rowY(int step) {
-        return ORIGIN_Y + step * CELL_H;
+        return ORIGIN_Y + step * CELL_H + 1f;
     }
 
-    private SpriteBatch batch;
-
-    private int[][] boardState;      // boardState[col][slot] = height or -1 if empty
+    private int[][] boardState;      // boardState[column][slot] = height or -1 if empty
     private boolean isBlueTurn = true;
 
     // Assets
@@ -47,10 +49,12 @@ public class PlayScreen implements Screen {
 
     private int[] columnWinner; // -1 = nobody, 0 = blue, 1 = red
 
+    private static final int[] MAX_HEIGHT = {
+        3, 5, 7, 9, 11, 13, 11, 9, 7, 5, 3
+    };
 
-
-    public PlayScreen(SpriteBatch batch) {
-        this.batch = batch;
+    public PlayScreen(Main game) {
+        this.game = game;
 
         // Allocate the board and initialize to -1 (means “nothing here”)
         boardState = new int[NUM_COLS][NUM_SLOTS];
@@ -65,6 +69,7 @@ public class PlayScreen implements Screen {
 
         columnWinner = new int[NUM_COLS];
         Arrays.fill(columnWinner, -1);
+        columnWinner[8] = 0;
     }
 
     @Override
@@ -97,15 +102,7 @@ public class PlayScreen implements Screen {
     public void render(float delta) {
         handleInput();
         update();
-
-        // Clear screen
-        Gdx.gl.glClearColor(0.08f, 0.09f, 0.12f, 1f);
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-
-        // Draw everything between begin/end
-        batch.begin();
         draw();
-        batch.end();
     }
 
     public void handleInput() {
@@ -126,8 +123,13 @@ public class PlayScreen implements Screen {
 
     public void draw() {
 
+        ScreenUtils.clear(0f, 0f, 0f, 1f); // black background
+        game.viewport.apply();
+        game.batch.setProjectionMatrix(game.viewport.getCamera().combined);
+        game.batch.begin();
+
         // 1) Board first
-        batch.draw(board, 0, 0);
+        game.batch.draw(board, ORIGIN_X, ORIGIN_Y);
 
         // 2) Markers on top
         for (int col = 0; col < NUM_COLS; col++) {
@@ -136,17 +138,16 @@ public class PlayScreen implements Screen {
                 if (height < 0) continue; // skip empty slots
 
                 Texture tex = markerTextures[slot];
-                batch.draw(tex, colX(col), rowY(height));
+                game.batch.draw(tex, colX(col), rowY(height));
             }
         }
 
         // 3) Dice
-        float diceStartX = 600f; // pick an x far enough from the board
-        float diceY = 50f;  // height where dice sit
+        float diceStartX = 350f; // pick an x far enough from the board
+        float diceY = 250f;  // height where dice sit
 
         for (int i = 0; i < dice.length; i++) {
-            batch.draw(dice[i].currentFace(), diceStartX + i * 70f, diceY, 64f, 64f);
-            // 70f spacing, 64x64 size — adjust to your art
+            game.batch.draw(dice[i].currentFace, diceStartX + i * 40f, diceY, 32f, 32f);
         }
 
         // 4) Crosses for completed columns
@@ -155,9 +156,13 @@ public class PlayScreen implements Screen {
             if (winner == -1) continue;
 
             Texture crossTex = (winner == 0) ? blueCross : redCross;
-            batch.draw(crossTex, colX(col), rowY(MAX_HEIGHT[col] - 1));
+
+            for (int i = 0; i < MAX_HEIGHT[col]; i++) {
+                game.batch.draw(crossTex, colX(col), rowY(i));
+            }
         }
 
+        game.batch.end();
     }
 
     @Override

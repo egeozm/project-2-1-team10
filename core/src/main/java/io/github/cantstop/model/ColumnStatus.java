@@ -1,4 +1,4 @@
-package io.github.cantStop.model;
+package io.github.cantstop.model;
 
 public enum ColumnStatus {
     OPEN,

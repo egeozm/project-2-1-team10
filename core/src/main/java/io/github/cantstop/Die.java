@@ -1,4 +1,4 @@
-package io.github.cantStop.screens;
+package io.github.cantstop;
 
 import com.badlogic.gdx.graphics.Texture;
 import java.util.Random;
@@ -7,25 +7,20 @@ import java.util.Random;
 
 public class Die {
 
-    private final Texture[] faceTextures;
-    private int value;
-    private final Random random;
+    private Texture[] faceTextures;
+    public Texture currentFace;
+    public int value;
+    private Random random;
 
     public Die(Texture[] textures) {
         faceTextures = textures;
         value = 1;
+        currentFace = faceTextures[0];
         random = new Random();
     }
 
     public void roll() {
         value = random.nextInt(6) + 1; // generates a random value between 1 and 6
-    }
-
-    public int getValue() {
-        return value;
-    }
-
-    public Texture currentFace() {
-        return faceTextures[value - 1];
+        currentFace = faceTextures[value - 1];
     }
 }

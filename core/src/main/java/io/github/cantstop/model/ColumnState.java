@@ -1,8 +1,8 @@
-package io.github.cantStop.model;
+package io.github.cantstop.model;
 
-import io.github.cantStop.utensils.ConstantsBE;
+import io.github.cantstop.utensils.ConstantsBE;
 
-import static io.github.cantStop.utensils.ConstantsBE.*;
+import static io.github.cantstop.utensils.ConstantsBE.*;
 
 public final class ColumnState {
     private ColumnStatus status = ColumnStatus.OPEN;

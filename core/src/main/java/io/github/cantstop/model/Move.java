@@ -1,5 +1,5 @@
-package io.github.cantStop.model;
-import io.github.cantStop.utensils.ConstantsBE;
+package io.github.cantstop.model;
+import io.github.cantstop.utensils.ConstantsBE;
 import java.util.Objects;
 
 public final class Move {
