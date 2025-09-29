@@ -4,7 +4,7 @@ import java.util.Random;
 import java.util.Arrays;
 
 public final class DiceRoll {
-    private final int[] dice = new int[4];      // the four dice values
+    private final int[] dice = new int[4];        // the four dice values
     private final int[][] pairings = new int[3][2]; // the three possible pairings
 
     private DiceRoll(int d0, int d1, int d2, int d3) {
@@ -31,14 +31,14 @@ public final class DiceRoll {
     }
 
     /**
-     * Returns a copy of the 4 dice values (never modify the internal array).
+     * Returns a copy of the 4 dice values (never expose internal array).
      */
     public int[] dice() {
         return dice.clone();
     }
 
     /**
-     * Returns a deep copy of the 3 pairings (never modify the internal arrays).
+     * Returns a deep copy of the 3 pairings (never expose internals).
      */
     public int[][] pairings() {
         int[][] copy = new int[3][2];
@@ -60,7 +60,7 @@ public final class DiceRoll {
     }
 
     /**
-     * Return a string like "Advance on 6 & 10".
+     * Return a label like "Advance on 6 & 10".
      */
     public String pairingLabel(int index) {
         int[] p = getPairing(index);

@@ -3,6 +3,7 @@ package io.github.cantstop.screens;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
@@ -14,6 +15,7 @@ import com.badlogic.gdx.utils.Timer;
 import io.github.cantstop.GameAssets;
 import io.github.cantstop.Main;
 import io.github.cantstop.model.DiceRoll;
+import io.github.cantstop.model.DiceRow;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -71,19 +73,6 @@ public class PlayScreen implements Screen {
     // Store dice rows to render aligned with buttons
     private final List<DiceRow> optionDiceRows = new ArrayList<>();
 
-    // Helper class for rendering dice next to buttons
-    private static class DiceRow {
-        int[] diceValues;
-        float x, y, size;
-
-        DiceRow(int[] diceValues, float x, float y, float size) {
-            this.diceValues = diceValues;
-            this.x = x;
-            this.y = y;
-            this.size = size;
-        }
-    }
-
     public PlayScreen(Main game) {
         this.game = game;
 
@@ -106,8 +95,8 @@ public class PlayScreen implements Screen {
         Gdx.input.setInputProcessor(stage);
 
         rollButton = new TextButton("Roll", skin);
-        rollButton.setSize(240, 100);
-        rollButton.setPosition(Gdx.graphics.getWidth() / 2f, 110, Align.center);
+        rollButton.setSize(120, 50);
+        rollButton.setPosition(500, 200);
         rollButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
@@ -121,13 +110,23 @@ public class PlayScreen implements Screen {
         clearOptionButtons();
         optionDiceRows.clear();
 
-        // remove roll button right away
         if (rollButton.hasParent()) {
             rollButton.remove();
         }
 
         currentRoll = DiceRoll.roll(rng);
         rolledDice = null;
+
+        // Create temporary rows so we see dice during animation
+        float startY = 500f;
+        float rowSpacing = 120f;
+        float diceSize = 64f;
+        float gap = 20f;
+        for (int i = 0; i < 3; i++) {
+            float diceY = startY - i * rowSpacing;
+            float diceStartX = 600f;
+            optionDiceRows.add(new DiceRow(new int[]{1, 2, 3, 4}, diceStartX, diceY, diceSize, gap, i));
+        }
 
         rolling = true;
 
@@ -142,51 +141,38 @@ public class PlayScreen implements Screen {
     }
 
 
+
     private void showOptions() {
-        rollButton.remove();
         clearOptionButtons();
         optionDiceRows.clear();
 
         int[][] combos = currentRoll.pairings();
-        int[] diceValues = currentRoll.dice();
+        int[] d = currentRoll.dice();
 
-        float startY = 400f;
-        float rowSpacing = 120f;
-        float diceStartX = 200f;
+        float startY = 300f;     // was 500f → lower it so visible in 400px tall screen
+        float rowSpacing = 100f; // tighten spacing
         float diceSize = 64f;
+        float gap = 20f;
+
+        int[][] rows = {
+            { d[0], d[1], d[2], d[3] },
+            { d[0], d[2], d[1], d[3] },
+            { d[0], d[3], d[1], d[2] }
+        };
 
         for (int i = 0; i < combos.length; i++) {
-            float rowY = startY - i * rowSpacing;
+            float diceY = startY - i * rowSpacing;
+            float diceStartX = 200f; // push left so buttons also fit
 
-            // reorder dice per pairing
-            int[] order;
-            switch (i) {
-                case 0: order = new int[]{0, 1, 2, 3}; break; // d0 d1 | d2 d3
-                case 1: order = new int[]{0, 2, 1, 3}; break; // d0 d2 | d1 d3
-                case 2: order = new int[]{0, 3, 1, 2}; break; // d0 d3 | d1 d2
-                default: order = new int[]{0, 1, 2, 3};
-            }
-
-            int[] rowDice = new int[4];
-            for (int j = 0; j < 4; j++) {
-                rowDice[j] = diceValues[order[j]];
-            }
-
-            optionDiceRows.add(new DiceRow(rowDice, diceStartX, rowY, diceSize));
-
-            // Button next to dice row
-            int left = combos[i][0];
-            int right = combos[i][1];
-
-            float intraPairGap = 10f;
-            float interPairGap = 40f;
-            float totalWidth = (2 * diceSize + intraPairGap) + interPairGap + (2 * diceSize + intraPairGap);
-
-            TextButton option = new TextButton("Advance on " + left + " & " + right, skin);
-            option.setSize(280, 80);
-            option.setPosition(diceStartX + totalWidth + 30f, rowY, Align.left);
+            optionDiceRows.add(new DiceRow(rows[i], diceStartX, diceY, diceSize, gap, i));
 
             final int idx = i;
+            int left = combos[i][0];
+            int right = combos[i][1];
+            TextButton option = new TextButton("Advance on " + left + " & " + right, skin);
+            option.setSize(150, 40);
+            option.setPosition(diceStartX +  50f, diceY);
+
             option.addListener(new ClickListener() {
                 @Override
                 public void clicked(InputEvent event, float x, float y) {
@@ -199,6 +185,7 @@ public class PlayScreen implements Screen {
             stage.addActor(option);
         }
     }
+
 
 
 
@@ -244,10 +231,8 @@ public class PlayScreen implements Screen {
         game.batch.setProjectionMatrix(game.viewport.getCamera().combined);
         game.batch.begin();
 
-        // 1) Board
+        // --- Board drawing (same as before) ---
         game.batch.draw(board, ORIGIN_X, ORIGIN_Y);
-
-        // 2) Markers
         for (int col = 0; col < NUM_COLS; col++) {
             for (int slot = 0; slot < NUM_SLOTS; slot++) {
                 int height = boardState[col][slot];
@@ -256,8 +241,6 @@ public class PlayScreen implements Screen {
                 game.batch.draw(tex, colX(col), rowY(height));
             }
         }
-
-        // 3) Crosses
         for (int col = 0; col < NUM_COLS; col++) {
             int winner = columnWinner[col];
             if (winner == -1) continue;
@@ -267,36 +250,16 @@ public class PlayScreen implements Screen {
             }
         }
 
-        // 4) Dice: animate while rolling, otherwise show rows
+        // --- Dice animation / results ---
         if (rolling) {
-            float diceStartX = 200f;
-            float diceY = 400f;
-            float diceSize = 64f;
-            for (int i = 0; i < 4; i++) {
-                int face = rng.nextInt(6);
-                game.batch.draw(diceFaces[face], diceStartX + i * (diceSize + 10f), diceY, diceSize, diceSize);
-            }
-        } else {
-            float intraPairGap = 10f;
-            float interPairGap = 40f;
-
+            // Animate ALL dice rows with random faces
             for (DiceRow row : optionDiceRows) {
-                for (int j = 0; j < row.diceValues.length; j++) {
-                    int faceIndex = row.diceValues[j] - 1;
-
-                    // compute offset with special bigger gap between pairs
-                    float offset;
-                    if (j < 2) {
-                        offset = j * (row.size + intraPairGap);
-                    } else {
-                        offset = (j * (row.size + intraPairGap)) + interPairGap;
-                    }
-
-                    game.batch.draw(diceFaces[faceIndex],
-                        row.x + offset,
-                        row.y,
-                        row.size, row.size);
-                }
+                row.drawRandom(game.batch, diceFaces, rng);
+            }
+        } else if (rolledDice != null) {
+            // Show the actual rolled dice in each row
+            for (DiceRow row : optionDiceRows) {
+                row.draw(game.batch, diceFaces);
             }
         }
 
