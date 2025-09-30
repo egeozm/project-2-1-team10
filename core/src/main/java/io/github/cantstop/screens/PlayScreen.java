@@ -243,18 +243,6 @@ public class PlayScreen implements Screen {
                 Texture tex = (gameState.toMove() == Player.BLUE) ? blueMarker2 : redMarker2;
                 game.batch.draw(tex, colX(col), rowY(tempHeight));
             }
-
-            // --- Locked columns ---
-            if (cs.isLocked()) {
-                // Determine which player locked this column
-                Player lockedByPlayer = (cs.status() == ColumnStatus.LOCKED_BLUE) ? Player.BLUE : Player.RED;
-                Texture cross = (lockedByPlayer == Player.BLUE) ? blueCross : redCross;
-
-                int maxHeight = ConstantsBE.maxHeight(ConstantsBE.colToSum(col));
-                for (int i = 0; i < maxHeight; i++) {
-                    game.batch.draw(cross, colX(col), rowY(i));
-                }
-            }
         }
 
         // --- Dice animation / results ---
