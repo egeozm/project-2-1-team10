@@ -52,6 +52,8 @@ public class PlayScreen implements Screen {
     private Stage stage;
     private Skin skin;
     private TextButton rollButton;
+    private TextButton passButton;
+
     private final List<TextButton> optionButtons = new ArrayList<>();
 
     // Dice animation + result
@@ -78,6 +80,29 @@ public class PlayScreen implements Screen {
             }
         });
         stage.addActor(rollButton);
+
+        passButton = new TextButton("Pass", skin);
+        passButton.setSize(120, 50);
+        passButton.setPosition(500, 120);
+        passButton.addListener(new ClickListener() {
+            @Override public void clicked(InputEvent event, float x, float y) {
+                switchPlayer();
+            } });
+        stage.addActor(passButton);
+    }
+
+    private void switchPlayer() {
+        clearOptionButtons();
+        optionDiceRows.clear();
+        currentRoll = null;
+        rolledDice = null;
+        Player next;
+        if (gameState.toMove() == Player.BLUE) {
+            next = Player.RED;
+        } else {
+            next = Player.BLUE;
+        }
+        gameState.setToMove(next);
     }
 
     private void startDiceAnimation() {

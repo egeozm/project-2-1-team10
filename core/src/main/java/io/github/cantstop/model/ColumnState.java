@@ -9,10 +9,6 @@ public final class ColumnState {
     private int redHeightPerm = 0;
     private int blueHeightPerm = 0;
     private Integer tempHeight = null; // null = no runners
-    private Player lockedBy = null;
-    private Player tempOwner = null; // new: keeps track of who placed the temp marker
-
-
 
     public ColumnStatus status() {
         return status;
@@ -24,10 +20,6 @@ public final class ColumnState {
         } else {
             return blueHeightPerm;
         }
-    }
-
-    public Player lockedBy() {
-        return lockedBy; // returns null if not locked
     }
 
     public Integer tempHeight() {
@@ -50,14 +42,12 @@ public final class ColumnState {
         }
 
         tempHeight = null;
-        lockedBy = p;
     }
 
 
 
     public void clearTemp() {
         tempHeight = null;
-        tempOwner = null;
     }
 
     public void applyTempAdvance(Player p, int sumForThisColumn) {
@@ -74,10 +64,6 @@ public final class ColumnState {
         } else {
             tempHeight = max;
         }
-
-        if (tempOwner == null) {
-            tempOwner = p;
-        }
     }
 
     public void commitTempToPerm(Player p, int sumForThisColumn) {
@@ -93,9 +79,4 @@ public final class ColumnState {
         }
         tempHeight = null;
     }
-
-    public Player tempOwner() {
-        return tempOwner;
-    }
-
 }
