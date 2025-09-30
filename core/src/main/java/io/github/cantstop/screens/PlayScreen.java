@@ -52,8 +52,6 @@ public class PlayScreen implements Screen {
     private Stage stage;
     private Skin skin;
     private TextButton rollButton;
-    private TextButton passButton;
-
     private final List<TextButton> optionButtons = new ArrayList<>();
 
     // Dice animation + result
@@ -80,31 +78,6 @@ public class PlayScreen implements Screen {
             }
         });
         stage.addActor(rollButton);
-
-        passButton = new TextButton("Pass", skin);
-        passButton.setSize(120, 50);
-        passButton.setPosition(500, 120);
-        passButton.addListener(new ClickListener() {
-            @Override
-            public void clicked(InputEvent event, float x, float y) {
-                switchPlayer();
-            }
-        });
-        stage.addActor(passButton);
-    }
-
-    private void switchPlayer() {
-        clearOptionButtons();
-        optionDiceRows.clear();
-        currentRoll = null;
-        rolledDice = null;
-        Player next;
-        if (gameState.toMove() == Player.BLUE) {
-            next = Player.RED;
-        } else {
-            next = Player.BLUE;
-        }
-        gameState.setToMove(next);
     }
 
     private void startDiceAnimation() {
@@ -118,7 +91,7 @@ public class PlayScreen implements Screen {
         currentRoll = DiceRoll.roll(rng);
         rolledDice = null;
 
-        // Create temporary rows so we see dice during animation
+        // temporary dice rows (random animation)
         float startY = 500f;
         float rowSpacing = 120f;
         float diceSize = 64f;
@@ -147,7 +120,7 @@ public class PlayScreen implements Screen {
 
         List<Move> legalMoves = Rules.getLegalMoves(gameState, currentRoll);
         if (legalMoves.isEmpty()) {
-            System.out.println("Bust! Switching player");
+            System.out.println("Bust! Switching turn.");
             gameState.setBustPending(true);
             Rules.stop(gameState); // auto stop on bust
             resetForNextRoll();
@@ -227,27 +200,29 @@ public class PlayScreen implements Screen {
         game.batch.setProjectionMatrix(game.viewport.getCamera().combined);
         game.batch.begin();
 
-        // --- Board drawing (same as before) ---
+        // --- Board drawing ---
         game.batch.draw(board, ORIGIN_X, ORIGIN_Y);
 
         for (int col = 0; col < ConstantsBE.NUM_COLS; col++) {
             ColumnState cs = gameState.columns()[col];
 
+            // --- Permanent markers ---
             int blueHeight = cs.permHeightFor(Player.BLUE);
             int redHeight  = cs.permHeightFor(Player.RED);
             if (blueHeight > 0) game.batch.draw(blueMarker1, colX(col), rowY(blueHeight));
             if (redHeight  > 0) game.batch.draw(redMarker1, colX(col), rowY(redHeight));
 
+            // --- Temp runner for active player ---
             Integer tempHeight = cs.tempHeight();
             if (tempHeight != null) {
-                Texture tex = (cs.tempOwner() == Player.BLUE) ? blueMarker2 : redMarker2;
+                Texture tex = (gameState.toMove() == Player.BLUE) ? blueMarker2 : redMarker2;
                 game.batch.draw(tex, colX(col), rowY(tempHeight));
             }
 
-
+            // --- Locked columns ---
             if (cs.isLocked()) {
-                System.out.println("Column " + col + " is locked by " + cs.lockedBy());
-                Player lockedByPlayer = cs.lockedBy();
+                // Determine which player locked this column
+                Player lockedByPlayer = (cs.status() == ColumnStatus.LOCKED_BLUE) ? Player.BLUE : Player.RED;
                 Texture cross = (lockedByPlayer == Player.BLUE) ? blueCross : redCross;
 
                 int maxHeight = ConstantsBE.maxHeight(ConstantsBE.colToSum(col));
@@ -255,17 +230,14 @@ public class PlayScreen implements Screen {
                     game.batch.draw(cross, colX(col), rowY(i));
                 }
             }
-
         }
 
         // --- Dice animation / results ---
         if (rolling) {
-            // Animate ALL dice rows with random faces
             for (DiceRow row : optionDiceRows) {
                 row.drawRandom(game.batch, diceFaces, rng);
             }
         } else if (rolledDice != null) {
-            // Show the actual rolled dice in each row
             for (DiceRow row : optionDiceRows) {
                 row.draw(game.batch, diceFaces);
             }
@@ -279,18 +251,13 @@ public class PlayScreen implements Screen {
 
 
     @Override
-    public void resize(int width, int height) {
-    }
+    public void resize(int width, int height) {}
     @Override
-    public void pause() {
-    }
+    public void pause() {}
     @Override
-    public void resume() {
-    }
-
+    public void resume() {}
     @Override
-    public void hide() {
-    }
+    public void hide() {}
     @Override
     public void dispose() {
         stage.dispose();
