@@ -4,7 +4,7 @@ import java.util.Random;
 import java.util.Arrays;
 
 public final class DiceRoll {
-    private final int[] dice = new int[4];        // the four dice
+    private final int[] dice = new int[4];        // the four dice values
     private final int[][] pairings = new int[3][2]; // the three possible pairings
 
     private DiceRoll(int d0, int d1, int d2, int d3) {
