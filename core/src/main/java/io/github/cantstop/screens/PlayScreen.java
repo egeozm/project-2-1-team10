@@ -11,6 +11,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.Timer;
 import io.github.cantstop.GameAssets;
+import io.github.cantstop.Instructions;
 import io.github.cantstop.Main;
 import io.github.cantstop.model.*;
 import io.github.cantstop.rules.Rules;
@@ -53,8 +54,12 @@ public class PlayScreen implements Screen {
     private Skin skin;
     private TextButton rollButton;
     private TextButton passButton;
+    private TextButton instructionsButton;
 
     private final List<TextButton> optionButtons = new ArrayList<>();
+
+    private Instructions instructions;
+    private boolean showInstructions = false;
 
     // Dice animation + result
     private boolean rolling = false;
@@ -69,6 +74,8 @@ public class PlayScreen implements Screen {
         stage = new Stage();
         skin = new Skin(Gdx.files.internal("uiskin.json"));
         Gdx.input.setInputProcessor(stage);
+
+        instructions = new Instructions(blueCross); // temporary texture for test purposes
 
         rollButton = new TextButton("Roll", skin);
         rollButton.setSize(120, 50);
@@ -89,6 +96,15 @@ public class PlayScreen implements Screen {
                 switchPlayer();
             } });
         stage.addActor(passButton);
+
+        instructionsButton = new TextButton("Instructions", skin);
+        instructionsButton.setSize(120, 50);
+        instructionsButton.setPosition(500, 60);
+        instructionsButton.addListener(new ClickListener() {
+            @Override public void clicked(InputEvent event, float x, float y) {
+                showInstructions = !showInstructions;
+            } });
+        stage.addActor(instructionsButton);
     }
 
     private void switchPlayer() {
@@ -117,13 +133,13 @@ public class PlayScreen implements Screen {
         rolledDice = null;
 
         // temporary dice rows (random animation)
-        float startY = 500f;
-        float rowSpacing = 120f;
-        float diceSize = 64f;
+        float startY = 200f;
+        float rowSpacing = 40f;
+        float diceSize = 32f;
         float gap = 20f;
         for (int i = 0; i < 3; i++) {
             float diceY = startY - i * rowSpacing;
-            float diceStartX = 600f;
+            float diceStartX = 300f;
             optionDiceRows.add(new DiceRow(new int[]{1, 2, 3, 4}, diceStartX, diceY, diceSize, gap, i));
         }
 
@@ -229,6 +245,10 @@ public class PlayScreen implements Screen {
         game.batch.draw(board, ORIGIN_X, ORIGIN_Y);
 
         for (int col = 0; col < ConstantsBE.NUM_COLS; col++) {
+            game.font.draw(game.batch, Integer.toString(col+2), colX(col)+4f, rowY(ConstantsBE.MAX_HEIGHT[col])-4f);
+        }
+
+        for (int col = 0; col < ConstantsBE.NUM_COLS; col++) {
             ColumnState cs = gameState.columns()[col];
 
             // --- Permanent markers ---
@@ -256,15 +276,21 @@ public class PlayScreen implements Screen {
             }
         }
 
+        if (showInstructions) {
+            instructions.draw(game.batch, game.font);
+        }
+
         game.batch.end();
 
         stage.act(delta);
         stage.draw();
     }
 
-
     @Override
-    public void resize(int width, int height) {}
+    public void resize(int width, int height) {
+        stage.getViewport().update(width, height, true);
+    }
+
     @Override
     public void pause() {}
     @Override
