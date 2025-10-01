@@ -20,13 +20,13 @@ public final class Rules {
 
     // Returns list of all possible moves
     public static List<Move> getLegalMoves(GameState s, DiceRoll r) {
-        int[][] p = r.pairings();
         List<Move> moves = new ArrayList<>(3);
         for (int i = 0; i < 3; i++) {
-            int a = p[i][0];
-            int b = p[i][1];
-            if (canUsePairing(s, a, b)) {
-                moves.add(Move.of(i, a, b));
+            int[] dice = r.getPairing(i);
+            int SumA = dice[0] + dice[1];
+            int SumB = dice[2] + dice[3];
+            if (canUsePairing(s, SumA, SumB)) {
+                moves.add(Move.of(i, SumA, SumB));
             }
         }
         return moves;

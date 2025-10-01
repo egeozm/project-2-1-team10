@@ -75,7 +75,7 @@ public class PlayScreen implements Screen {
         skin = new Skin(Gdx.files.internal("uiskin.json"));
         Gdx.input.setInputProcessor(stage);
 
-        instructions = new Instructions(blueCross); // temporary texture for test purposes
+        instructions = new Instructions(blueCross); // placeholder texture
 
         rollButton = new TextButton("Roll", skin);
         rollButton.setSize(120, 50);
@@ -112,12 +112,7 @@ public class PlayScreen implements Screen {
         optionDiceRows.clear();
         currentRoll = null;
         rolledDice = null;
-        Player next;
-        if (gameState.toMove() == Player.BLUE) {
-            next = Player.RED;
-        } else {
-            next = Player.BLUE;
-        }
+        Player next = (gameState.toMove() == Player.BLUE) ? Player.RED : Player.BLUE;
         gameState.setToMove(next);
     }
 
@@ -131,20 +126,9 @@ public class PlayScreen implements Screen {
 
         currentRoll = DiceRoll.roll(rng);
         rolledDice = null;
-
-        // temporary dice rows (random animation)
-        float startY = 200f;
-        float rowSpacing = 40f;
-        float diceSize = 32f;
-        float gap = 20f;
-        for (int i = 0; i < 3; i++) {
-            float diceY = startY - i * rowSpacing;
-            float diceStartX = 300f;
-            optionDiceRows.add(new DiceRow(new int[]{1, 2, 3, 4}, diceStartX, diceY, diceSize, gap, i));
-        }
-
         rolling = true;
 
+        // Stop animation after 1s and show the real dice
         Timer.schedule(new Timer.Task() {
             @Override
             public void run() {
@@ -179,11 +163,13 @@ public class PlayScreen implements Screen {
             float diceY = startY - i * rowSpacing;
             float diceStartX = 200f;
 
-            optionDiceRows.add(new DiceRow(currentRoll.dice(), diceStartX, diceY, diceSize, gap, i));
+            // Each legal move gets its own DiceRow (3 rows max)
+            optionDiceRows.add(new DiceRow(currentRoll.getPairing(i), diceStartX, diceY, diceSize, gap, i));
+
 
             TextButton option = new TextButton("Advance on " + move.sumA() + " & " + move.sumB(), skin);
             option.setSize(200, 40);
-            option.setPosition(diceStartX + 50f, diceY);
+            option.setPosition(diceStartX + 200f, diceY);
 
             option.addListener(new ClickListener() {
                 @Override
@@ -265,12 +251,19 @@ public class PlayScreen implements Screen {
             }
         }
 
-        // --- Dice animation / results ---
+        // --- Dice drawing ---
         if (rolling) {
-            for (DiceRow row : optionDiceRows) {
-                row.drawRandom(game.batch, diceFaces, rng);
+            // Animate just 4 dice in one row
+            float diceY = 150;
+            float diceStartX = 200;
+            float diceSize = 64f;
+            float gap = 20f;
+            for (int i = 0; i < 4; i++) {
+                int randomFace = rng.nextInt(6);
+                game.batch.draw(diceFaces[randomFace], diceStartX + i * (diceSize + gap), diceY, diceSize, diceSize);
             }
         } else if (rolledDice != null) {
+            // Show combinations in rows
             for (DiceRow row : optionDiceRows) {
                 row.draw(game.batch, diceFaces);
             }
@@ -291,12 +284,9 @@ public class PlayScreen implements Screen {
         stage.getViewport().update(width, height, true);
     }
 
-    @Override
-    public void pause() {}
-    @Override
-    public void resume() {}
-    @Override
-    public void hide() {}
+    @Override public void pause() {}
+    @Override public void resume() {}
+    @Override public void hide() {}
     @Override
     public void dispose() {
         stage.dispose();
