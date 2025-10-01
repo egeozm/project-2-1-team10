@@ -1,11 +1,13 @@
 package io.github.cantstop;
 
+
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import io.github.cantstop.screens.MenuScreen;
+import com.badlogic.gdx.audio.Music;
 
 /** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
 public class Main extends Game {
@@ -13,6 +15,7 @@ public class Main extends Game {
     public FitViewport viewport;
     public SpriteBatch batch;
     public BitmapFont font;
+    public Music mainMenuMusic;
 
     @Override
     public void create() {
@@ -26,7 +29,19 @@ public class Main extends Game {
         font.setUseIntegerPositions(false);
         font.getData().setScale(2 * viewport.getWorldHeight() / Gdx.graphics.getHeight());
 
+        //music
+        mainMenuMusic = Gdx.audio.newMusic(Gdx.files.internal("music/mainMenuMusic.mp3"));
+        mainMenuMusic.setLooping(true);
+        mainMenuMusic.play();
+
         setScreen(new MenuScreen(this));
+    }
+
+    public void startGame() {
+        if(mainMenuMusic.isPlaying()){
+            mainMenuMusic.stop();
+        }
+        setScreen(new io.github.cantstop.screens.PlayScreen(this));
     }
 
     @Override
@@ -50,6 +65,8 @@ public class Main extends Game {
         batch.dispose();
         font.dispose();
         screen.dispose();
+        if(mainMenuMusic != null)
+            mainMenuMusic.dispose();
     }
 }
 
