@@ -140,10 +140,9 @@ public class PlayScreen implements Screen {
     }
 
     private void showOptions() {
-        clearOptionButtons();
-        optionDiceRows.clear();
 
         List<Move> legalMoves = Rules.getLegalMoves(gameState, currentRoll);
+        optionDiceRows.clear();
         if (legalMoves.isEmpty()) {
             System.out.println("Bust! Switching turn.");
             gameState.setBustPending(true);
@@ -152,10 +151,10 @@ public class PlayScreen implements Screen {
             return;
         }
 
-        float startY = 300f;
+        float startY = 200;
         float rowSpacing = 100f;
-        float diceSize = 64f;
-        float gap = 20f;
+        float diceSize = 32;
+        float gap = 20;
 
         for (int i = 0; i < legalMoves.size(); i++) {
             Move move = legalMoves.get(i);
@@ -163,8 +162,9 @@ public class PlayScreen implements Screen {
             float diceY = startY - i * rowSpacing;
             float diceStartX = 200f;
 
+            int[] pairingDice = currentRoll.getPairing(move.pairingIndex());
             // Each legal move gets its own DiceRow (3 rows max)
-            optionDiceRows.add(new DiceRow(currentRoll.getPairing(i), diceStartX, diceY, diceSize, gap, i));
+            optionDiceRows.add(new DiceRow(pairingDice, diceStartX, diceY, diceSize, gap, i));
 
 
             TextButton option = new TextButton("Advance on " + move.sumA() + " & " + move.sumB(), skin);
@@ -254,7 +254,7 @@ public class PlayScreen implements Screen {
         // --- Dice drawing ---
         if (rolling) {
             // Animate just 4 dice in one row
-            float diceY = 150;
+            float diceY = 100;
             float diceStartX = 200;
             float diceSize = 64f;
             float gap = 20f;
