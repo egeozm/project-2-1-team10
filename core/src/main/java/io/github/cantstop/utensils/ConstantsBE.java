@@ -1,37 +1,61 @@
 package io.github.cantstop.utensils;
 
 public final class ConstantsBE {
-    private ConstantsBE() {}
 
+    private ConstantsBE() {} // utility class, no objects allowed
+
+    // Dice sum range (2..12) -> 11 columns on the board
     public static final int COL_MIN = 2;
     public static final int COL_MAX = 12;
-    public static final int NUM_COLS = COL_MAX - COL_MIN + 1;
+    public static final int NUM_COLS = COL_MAX - COL_MIN + 1; // 11 total
 
+    // Max number of active temporary runners in one turn
     public static final int MAX_TEMP_RUNNERS = 3;
+
+    // How many locked columns you need to win the game
     public static final int TO_WIN = 3;
 
-    public static final int[] MAX_HEIGHT = new int[] {
-        3,5,7,9,11,13,11,9,7,5,3
+    // Column status codes (0=open, 1=red locked, 2=blue locked)
+    public static final int STATUS_OPEN = 0;
+    public static final int STATUS_LOCKED_RED = 1;
+    public static final int STATUS_LOCKED_BLUE = 2;
+
+    // Special value for "no temporary runner" in temp[]
+    public static final int TEMP_NONE = -1;
+
+    // Max column heights for sums 2..12 (index = sum - 2)
+    private static final int[] MAX_HEIGHT_BY_SUM = {
+        3, 5, 7, 9, 11, 13, 11, 9, 7, 5, 3
     };
 
-    // sum - given combination ex. 1+1=2, 1+2=3 ...
-
-    // changes sum of dices into the array(board) index
+    // Convert dice sum (2..12) -> column index (0..10)
     public static int sumToColumnID(int sum) {
-        if (sum < COL_MIN || sum > COL_MAX) throw new IllegalArgumentException("sum out of range");
+        if (sum < COL_MIN || sum > COL_MAX) {
+            throw new IllegalArgumentException("sum out of range: " + sum);
+        }
         return sum - COL_MIN;
     }
 
-    // changes array index into sum of dices (other way around)
+    // Convert column index (0..10) -> dice sum (2..12)
     public static int colToSum(int col) {
-        if (col < 0 || col >= NUM_COLS) throw new IllegalArgumentException("col out of range");
+        if (col < 0 || col >= NUM_COLS) {
+            throw new IllegalArgumentException("col out of range: " + col);
+        }
         return col + COL_MIN;
     }
 
-    // height of a given column
+    // Get the max height for a given dice sum (2..12)
     public static int maxHeight(int sum) {
-        if (sum < COL_MIN || sum > COL_MAX) throw new IllegalArgumentException("sum out of range");
-        return MAX_HEIGHT[sum - COL_MIN];
+        return MAX_HEIGHT_BY_SUM[sumToColumnID(sum)];
     }
 
+    // Quick check if a sum is valid
+    public static boolean isValidSum(int sum) {
+        return sum >= COL_MIN && sum <= COL_MAX;
+    }
+
+    // Quick check if a column index is valid
+    public static boolean isValidCol(int col) {
+        return col >= 0 && col < NUM_COLS;
+    }
 }
