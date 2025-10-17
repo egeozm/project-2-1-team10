@@ -6,7 +6,10 @@ import static io.github.cantstop.utensils.ConstantsBE.*;
 
 public final class ColumnState {
     private ColumnStatus status = ColumnStatus.OPEN;
+    //bitboard
     private int redHeightPerm = 0;
+    //colums[3][11]
+    // col=0 (sum=2): [blue=0, red=0, temp=0]
     private int blueHeightPerm = 0;
     private Integer tempHeight = null; // null = no runners
 

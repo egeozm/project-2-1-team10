@@ -6,7 +6,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 public final class GameState {
-    private Player toMove;
+    private Player toMove; // flag
     private final ColumnState[] columns = new ColumnState[ConstantsBE.NUM_COLS];
     private int tempRunnersCount = 0;  // 3 is max
     private final Set<Integer> activeTempCols = new HashSet<>(); //set of all temporal markers used at the moment
