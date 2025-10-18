@@ -3,8 +3,8 @@ package io.github.cantstop.model;
 import java.util.Random;
 
 /**
- * Roll of four six-sided dice (4 × d6)
- * + helper methods for the three possible pairings (sum combinations).
+ * Roll of four dices (4 × d)
+ * + methods for the three possible pairings (sum combinations)
  */
 public final class DiceRoll {
 
@@ -37,15 +37,15 @@ public final class DiceRoll {
     public int[][] pairings() {
         int[][] p = new int[3][2];
 
-        // pairing 0: (d0+d1, d2+d3)
+        // pairing 0
         p[0][0] = dice[0] + dice[1];
         p[0][1] = dice[2] + dice[3];
 
-        // pairing 1: (d0+d2, d1+d3)
+        // pairing 1
         p[1][0] = dice[0] + dice[2];
         p[1][1] = dice[1] + dice[3];
 
-        // pairing 2: (d0+d3, d1+d2)
+        // pairing 2
         p[2][0] = dice[0] + dice[3];
         p[2][1] = dice[1] + dice[2];
 

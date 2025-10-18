@@ -7,15 +7,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Game logic – rules for valid moves, busts, column locks, etc.
+ * Game logic:
+ * rules for valid moves, busts, column locks, etc..
  */
 public final class Rules {
 
-    private Rules() {} // no objects, static-only class
+    private Rules() {} // utility class
 
-    // --- MAIN RULES ---
-
-    // Find all legal pairings (moves) for the current roll and game state
+    // Find all legal pairings (moves) for the current roll and game state and save them in a list
     public static List<Move> getLegalMoves(GameState s, DiceRoll r) {
         int[][] p = r.pairings();          // all 3 possible pairings
         List<Move> moves = new ArrayList<>(3);
@@ -42,7 +41,7 @@ public final class Rules {
         advanceOne(s, m.sumB());
     }
 
-    // Stop: commit TEMP -> PERM, lock full columns, clear TEMP, switch player
+    // Stop: commit TEMP to PERM, lock full columns, clear TEMP, switch player
     public static void stop(GameState s) {
         Player player = s.toMove();
         s.commitTemps(player);
@@ -64,12 +63,10 @@ public final class Rules {
         s.setBustPending(false);
     }
 
-    // Continue turn: do nothing, player rolls again
+    // Continue turn: just do nothing, player rolls again
     public static void continueTurn(GameState s) {
-        // nothing to do here
+        // just empty body, its more for readability
     }
-
-    // --- HELPERS ---
 
     // Raise one TEMP runner in a column if it's not locked
     private static void advanceOne(GameState s, int sum) {
@@ -81,7 +78,7 @@ public final class Rules {
     }
 
     // Check if a given pairing (sumA, sumB) is legal under the current state
-    // respects locked columns and the 3-runner limit
+    // respects locked columns and the 3runners limit
     private static boolean canUsePairing(GameState s, int sumA, int sumB) {
         int colA = ConstantsBE.sumToColumnID(sumA);
         int colB = ConstantsBE.sumToColumnID(sumB);
@@ -89,7 +86,7 @@ public final class Rules {
         boolean aLocked = s.isLocked(colA);
         boolean bLocked = s.isLocked(colB);
 
-        // both locked -> illegal
+        // both locked = illegal
         if (aLocked && bLocked) {
             return false;
         }

@@ -1,8 +1,8 @@
 package io.github.cantstop.model;
 
 /**
- * Represents a chosen move:
- * pairing index (0..2) + two sums from that dice pairing.
+ * Represents a chosen action:
+ * pairing index (0..2) + two sums from that dice pairing
  */
 public final class Move {
 
@@ -35,7 +35,7 @@ public final class Move {
         }
     }
 
-    // short debug-friendly string
+    // short print for simulation purposes
     @Override
     public String toString() {
         return "Move{pair=" + pairingIndex + ", sums=" + sumA + "+" + sumB + "}";

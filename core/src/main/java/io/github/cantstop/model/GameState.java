@@ -3,10 +3,8 @@ package io.github.cantstop.model;
 import io.github.cantstop.utensils.ConstantsBE;
 import java.util.Arrays;
 
-/**
- * Single source of truth for game state (array-only):
- * permRed / permBlue / temp / statusArr.
- */
+ //permRed / permBlue / temp / statusArr
+
 public final class GameState {
 
     private Player toMove;       // who moves now
@@ -17,7 +15,7 @@ public final class GameState {
     private final int[] permBlue = new int[ConstantsBE.NUM_COLS];
 
     // temporary heights for current turn, TEMP_NONE = no runner
-    private final int[] temp     = new int[ConstantsBE.NUM_COLS];
+    private final int[] temp = new int[ConstantsBE.NUM_COLS];
 
     // column status: 0=open, 1=locked by RED, 2=locked by BLUE
     private final int[] statusArr = new int[ConstantsBE.NUM_COLS];
@@ -37,7 +35,7 @@ public final class GameState {
         return s;
     }
 
-    // --- basic getters / setters ---
+    // getters/setters
 
     public Player toMove() { return toMove; }
 
@@ -57,6 +55,7 @@ public final class GameState {
         return value;
     }
 
+    // increase the locked count
     public void incLocked(Player p) {
         if (p == Player.RED) {
             redLocked++;
@@ -163,7 +162,7 @@ public final class GameState {
         Arrays.fill(temp, ConstantsBE.TEMP_NONE);
     }
 
-    // --- read-only "view" helpers (frontend / AI can read state via these) ---
+    // I thought they might come in handy when we deal with AI
 
     // by sum (2..12)
     public int redPermAtSum(int sum)  { return permRed[ConstantsBE.sumToColumnID(sum)]; }
@@ -177,7 +176,7 @@ public final class GameState {
     public int tempAtCol(int col)     { return temp[col]; }       // TEMP_NONE = none
     public int statusAtCol(int col)   { return statusArr[col]; }
 
-    // copy the whole state (useful for AI / search)
+    // copy of the whole state!!!
     public GameState copy() {
         GameState g = new GameState();
         g.toMove = this.toMove;
