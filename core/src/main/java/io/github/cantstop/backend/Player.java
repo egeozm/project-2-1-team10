@@ -1,4 +1,4 @@
-package io.github.cantstop.model;
+package io.github.cantstop.backend;
 
 public enum Player {
     RED, BLUE;
@@ -10,6 +10,5 @@ public enum Player {
             return RED;
         }
     }
-
 }
 

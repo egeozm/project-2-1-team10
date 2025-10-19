@@ -1,4 +1,4 @@
-package io.github.cantstop;
+package io.github.cantstop.frontend;
 
 
 import com.badlogic.gdx.Game;
@@ -6,8 +6,9 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.viewport.FitViewport;
-import io.github.cantstop.screens.MenuScreen;
+import io.github.cantstop.frontend.screens.MenuScreen;
 import com.badlogic.gdx.audio.Music;
+import io.github.cantstop.frontend.screens.PlayScreen;
 
 /** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
 public class Main extends Game {
@@ -41,7 +42,7 @@ public class Main extends Game {
         if(mainMenuMusic.isPlaying()){
             mainMenuMusic.stop();
         }
-        setScreen(new io.github.cantstop.screens.PlayScreen(this));
+        setScreen(new PlayScreen(this));
     }
 
     @Override

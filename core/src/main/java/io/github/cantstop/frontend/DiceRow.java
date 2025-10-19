@@ -1,4 +1,4 @@
-package io.github.cantstop.model;
+package io.github.cantstop.frontend;
 
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;

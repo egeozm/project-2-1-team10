@@ -1,4 +1,4 @@
-package io.github.cantstop.screens;
+package io.github.cantstop.frontend.screens;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
@@ -10,12 +10,13 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.Timer;
-import io.github.cantstop.GameAssets;
-import io.github.cantstop.Instructions;
-import io.github.cantstop.Main;
-import io.github.cantstop.model.*;
-import io.github.cantstop.rules.Rules;
-import io.github.cantstop.utensils.ConstantsBE;
+import io.github.cantstop.frontend.DiceRow;
+import io.github.cantstop.frontend.GameAssets;
+import io.github.cantstop.frontend.Instructions;
+import io.github.cantstop.frontend.Main;
+import io.github.cantstop.backend.*;
+import io.github.cantstop.backend.TurnManager;
+import io.github.cantstop.backend.GameConstants;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -112,8 +113,8 @@ public class PlayScreen implements Screen {
         optionDiceRows.clear();
         currentRoll = null;
         rolledDice = null;
-        Player next = (gameState.toMove() == Player.BLUE) ? Player.RED : Player.BLUE;
-        gameState.setToMove(next);
+        Player next = (gameState.getCurrentPlayer() == Player.BLUE) ? Player.RED : Player.BLUE;
+        gameState.setCurrentPlayer(next);
     }
 
     private void startDiceAnimation() {
@@ -141,12 +142,12 @@ public class PlayScreen implements Screen {
 
     private void showOptions() {
 
-        List<Move> legalMoves = Rules.getLegalMoves(gameState, currentRoll);
+        List<Move> legalMoves = TurnManager.getLegalMoves(gameState, currentRoll);
         optionDiceRows.clear();
         if (legalMoves.isEmpty()) {
             System.out.println("Bust! Switching turn.");
             gameState.setBustPending(true);
-            Rules.stop(gameState); // auto stop on bust
+            TurnManager.stop(gameState); // auto stop on bust
             resetForNextRoll();
             return;
         }
@@ -174,7 +175,7 @@ public class PlayScreen implements Screen {
             option.addListener(new ClickListener() {
                 @Override
                 public void clicked(InputEvent event, float x, float y) {
-                    Rules.applyMove(gameState, move);
+                    TurnManager.applyMove(gameState, move);
                     resetForNextRoll();
                 }
             });
@@ -216,7 +217,7 @@ public class PlayScreen implements Screen {
         diceFaces = assets.diceTextures;
 
         // fresh game
-        gameState = GameState.initial(Player.BLUE);
+        gameState = new GameState(Player.BLUE);
     }
 
     @Override
@@ -230,11 +231,11 @@ public class PlayScreen implements Screen {
         // --- Board drawing ---
         game.batch.draw(board, ORIGIN_X, ORIGIN_Y);
 
-        for (int col = 0; col < ConstantsBE.NUM_COLS; col++) {
-            game.font.draw(game.batch, Integer.toString(col+2), colX(col)+4f, rowY(ConstantsBE.MAX_HEIGHT[col])-4f);
+        for (int col = 0; col < GameConstants.NUM_COLS; col++) {
+            game.font.draw(game.batch, Integer.toString(col+2), colX(col)+4f, rowY(GameConstants.MAX_COLUMN_HEIGHTS[col])-4f);
         }
 
-        for (int col = 0; col < ConstantsBE.NUM_COLS; col++) {
+        for (int col = 0; col < GameConstants.NUM_COLS; col++) {
             ColumnState cs = gameState.columns()[col];
 
             // --- Permanent markers ---
@@ -246,7 +247,7 @@ public class PlayScreen implements Screen {
             // --- Temp runner for active player ---
             Integer tempHeight = cs.tempHeight();
             if (tempHeight != null) {
-                Texture tex = (gameState.toMove() == Player.BLUE) ? blueMarker2 : redMarker2;
+                Texture tex = (gameState.getCurrentPlayer() == Player.BLUE) ? blueMarker2 : redMarker2;
                 game.batch.draw(tex, colX(col), rowY(tempHeight));
             }
         }

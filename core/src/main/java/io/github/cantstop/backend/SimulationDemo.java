@@ -1,40 +1,37 @@
-package io.github.cantstop;
-
-import io.github.cantstop.model.*;
-import io.github.cantstop.rules.Rules;
+package io.github.cantstop.backend;
 
 import java.util.List;
 import java.util.Random;
 
 public class SimulationDemo {
     public static void main(String[] args) {
-        GameState state = GameState.initial(Player.RED);
+        GameState state = new GameState(Player.BLUE);
         Random rng = new Random(42);
 
         while (true) {
-            System.out.println("--- " + state.toMove() + " to move --");
+            System.out.println("--- " + state.getCurrentPlayer() + " to move --");
 
             DiceRoll roll = DiceRoll.roll(rng);
             int[] dice = roll.dice();
             System.out.printf("Rolled: %d %d %d %d%n", dice[0], dice[1], dice[2], dice[3]);
 
-            List<Move> moves = Rules.getLegalMoves(state, roll);
+            List<Move> moves = TurnManager.getLegalMoves(state, roll);
             if (moves.isEmpty()) {
                 System.out.println("Bust!");
-                Rules.stop(state);
+                TurnManager.stop(state);
             } else {
                 // For simulation just take the first legal move
                 Move m = moves.get(0);
                 System.out.println("Move: " + m);
-                Rules.applyMove(state, m);
+                TurnManager.applyMove(state, m);
 
                 // Stop policy - stop 50% of the time
                 if (rng.nextBoolean()) {
                     System.out.println("Decision: STOP");
-                    Rules.stop(state);
+                    TurnManager.stop(state);
                 } else {
                     System.out.println("Decision: CONTINUE");
-                    Rules.continueTurn(state);
+                    TurnManager.continueTurn(state);
                 }
             }
 

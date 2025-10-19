@@ -1,8 +1,6 @@
-package io.github.cantstop.utensils;
+package io.github.cantstop.backend;
 
-public final class ConstantsBE {
-
-    private ConstantsBE() {} // utility class
+public final class GameConstants {
 
     // Dice sum range (2...12), 11 columns on the board
     public static final int COL_MIN = 2;
@@ -24,7 +22,7 @@ public final class ConstantsBE {
     public static final int TEMP_NONE = -1;
 
     // Max column heights for sums 2..12 (index = sum - 2)
-    private static final int[] MAX_HEIGHT_BY_SUM = {
+    private static final int[] MAX_COLUMN_HEIGHTS = {
         3, 5, 7, 9, 11, 13, 11, 9, 7, 5, 3
     };
 
@@ -37,7 +35,7 @@ public final class ConstantsBE {
     }
 
     // column into dice sum
-    public static int colToSum(int col) {
+    public static int columnToSum(int col) {
         if (col < 0 || col >= NUM_COLS) {
             throw new IllegalArgumentException("col out of range: " + col);
         }
@@ -46,7 +44,7 @@ public final class ConstantsBE {
 
     // max height for a given dice sum (2..12)
     public static int maxHeight(int sum) {
-        return MAX_HEIGHT_BY_SUM[sumToColumnID(sum)];
+        return MAX_COLUMN_HEIGHTS[sumToColumnID(sum)];
     }
 
     // check if a sum is valid

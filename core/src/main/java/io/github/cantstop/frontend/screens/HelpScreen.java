@@ -1,4 +1,4 @@
-package io.github.cantstop.screens;
+package io.github.cantstop.frontend.screens;
 
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
@@ -7,25 +7,20 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
-import io.github.cantstop.Main;
+import io.github.cantstop.frontend.Main;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
-import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
-import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
-import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import io.github.cantstop.SharedSkin;
+import io.github.cantstop.frontend.SharedSkin;
 
-public class RulesScreen implements Screen {
+public class HelpScreen implements Screen {
     private Main game;
     private Stage stage;
     private Texture background;
 
-    public RulesScreen(Main game) {
+    public HelpScreen(Main game) {
         this.game = game;
         stage = new Stage(new ScreenViewport());
     }
@@ -35,7 +30,7 @@ public class RulesScreen implements Screen {
         Skin skin = SharedSkin.getSkin();
         background = new Texture(Gdx.files.internal("backgrounds/settingsBackground.png"));
 
-        Label label = new Label("I ll put the rules here i just need to find em", SharedSkin.getSkin(), "default");
+        Label label = new Label("How to navigate the menu?(i dont think so)/tips for how to play(strategy-wise ig)/ik iss a bit too much to do this but maybe also credits or sum like that. Also if something doesnt work before we have to present it we can mention it here or sum", SharedSkin.getSkin(), "default");
         label.setPosition(200, 300);
         stage.addActor(label);
 
@@ -47,13 +42,15 @@ public class RulesScreen implements Screen {
 
         table.add(backButton).size(200, 60).pad(10);
 
-        stage.addActor(table);
+
 
         backButton.addListener(new ClickListener() {
             public void clicked(InputEvent event, float x, float y) {
                 game.setScreen(new MenuScreen(game));
             }
         });
+
+        stage.addActor(table);
     }
 
     @Override

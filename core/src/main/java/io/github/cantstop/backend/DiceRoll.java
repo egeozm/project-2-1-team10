@@ -1,4 +1,4 @@
-package io.github.cantstop.model;
+package io.github.cantstop.backend;
 
 import java.util.Random;
 

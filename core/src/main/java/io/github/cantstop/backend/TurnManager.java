@@ -1,7 +1,4 @@
-package io.github.cantstop.rules;
-
-import io.github.cantstop.model.*;
-import io.github.cantstop.utensils.ConstantsBE;
+package io.github.cantstop.backend;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -10,9 +7,9 @@ import java.util.List;
  * Game logic:
  * rules for valid moves, busts, column locks, etc..
  */
-public final class Rules {
+public final class TurnManager {
 
-    private Rules() {} // utility class
+    private TurnManager() {} // utility class
 
     // Find all legal pairings (moves) for the current roll and game state and save them in a list
     public static List<Move> getLegalMoves(GameState s, DiceRoll r) {
@@ -24,7 +21,7 @@ public final class Rules {
             int b = p[i][1];
 
             if (canUsePairing(s, a, b)) {
-                moves.add(Move.of(i, a, b)); // add if legal
+                moves.add(new Move(i, a, b)); // add if legal
             }
         }
         return moves;
@@ -43,13 +40,13 @@ public final class Rules {
 
     // Stop: commit TEMP to PERM, lock full columns, clear TEMP, switch player
     public static void stop(GameState s) {
-        Player player = s.toMove();
+        Player player = s.getCurrentPlayer();
         s.commitTemps(player);
 
         // check every column for possible lock
-        for (int col = 0; col < ConstantsBE.NUM_COLS; col++) {
-            int sum = ConstantsBE.colToSum(col);
-            int max = ConstantsBE.maxHeight(sum);
+        for (int col = 0; col < GameConstants.NUM_COLS; col++) {
+            int sum = GameConstants.columnToSum(col);
+            int max = GameConstants.maxHeight(sum);
 
             if (!s.isLocked(col) && s.permHeight(player, col) >= max) {
                 s.lockColumn(player, col);
@@ -59,8 +56,7 @@ public final class Rules {
 
         // cleanup and pass the turn
         s.clearTemps();
-        s.setToMove(player.opponent());
-        s.setBustPending(false);
+        s.setCurrentPlayer(player.opponent());
     }
 
     // Continue turn: just do nothing, player rolls again
@@ -70,55 +66,31 @@ public final class Rules {
 
     // Raise one TEMP runner in a column if it's not locked
     private static void advanceOne(GameState s, int sum) {
-        int col = ConstantsBE.sumToColumnID(sum);
+        int col = GameConstants.sumToColumnID(sum);
         if (s.isLocked(col)) {
             return;
         }
-        s.addTemp(s.toMove(), sum);
+        s.addTemp(s.getCurrentPlayer(), sum);
     }
 
     // Check if a given pairing (sumA, sumB) is legal under the current state
-    // respects locked columns and the 3runners limit
+    // respects locked columns and the 3-runners limit
+
+    // TO DO: it currently only evaluates whether the entire pairing is legal or not
+    // We also need to account for the case where only one move is legal
+    // or both are legal but only 1 new runner can be added (so the player has to choose)
     private static boolean canUsePairing(GameState s, int sumA, int sumB) {
-        int colA = ConstantsBE.sumToColumnID(sumA);
-        int colB = ConstantsBE.sumToColumnID(sumB);
+        int colA = GameConstants.sumToColumnID(sumA);
+        int colB = GameConstants.sumToColumnID(sumB);
 
-        boolean aLocked = s.isLocked(colA);
-        boolean bLocked = s.isLocked(colB);
-
-        // both locked = illegal
-        if (aLocked && bLocked) {
-            return false;
-        }
+        if (s.isLocked(colA) && s.isLocked(colB)) return false;
 
         int active = s.activeRunnersCount();
-        int cap = ConstantsBE.MAX_TEMP_RUNNERS;
-
-        // same column (double move)
-        if (colA == colB) {
-            if (aLocked) {
-                return false;
-            }
-            if (s.isActive(colA) || active < cap) {
-                return true;
-            } else {
-                return false;
-            }
-        }
-
-        // different columns
         int newRunners = 0;
-        if (!aLocked && !s.isActive(colA)) {
-            newRunners++;
-        }
-        if (!bLocked && !s.isActive(colB)) {
-            newRunners++;
-        }
 
-        if (active + newRunners <= cap) {
-            return true;
-        } else {
-            return false;
-        }
+        if (!s.isLocked(colA) && !s.isActive(colA)) newRunners++;
+        if (!s.isLocked(colB) && !s.isActive(colB) && colA != colB) newRunners++;
+
+        return active + newRunners <= GameConstants.MAX_TEMP_RUNNERS;
     }
 }

@@ -1,4 +1,4 @@
-package io.github.cantstop.model;
+package io.github.cantstop.backend;
 
 /**
  * Represents a chosen action:
@@ -10,15 +10,10 @@ public final class Move {
     private final int sumA;         // first column sum
     private final int sumB;         // second column sum
 
-    private Move(int pairingIndex, int sumA, int sumB) {
+    public Move(int pairingIndex, int sumA, int sumB) {
         this.pairingIndex = pairingIndex;
         this.sumA = sumA;
         this.sumB = sumB;
-    }
-
-    // create a move with given pairing index and sums
-    public static Move of(int pairingIndex, int sumA, int sumB) {
-        return new Move(pairingIndex, sumA, sumB);
     }
 
     // getters
@@ -28,11 +23,7 @@ public final class Move {
 
     // true if both sums target the same column
     public boolean isSingle() {
-        if (sumA == sumB) {
-            return true;
-        } else {
-            return false;
-        }
+        return sumA == sumB;
     }
 
     // short print for simulation purposes

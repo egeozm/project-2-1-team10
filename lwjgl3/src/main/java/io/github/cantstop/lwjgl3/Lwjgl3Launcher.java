@@ -2,7 +2,7 @@ package io.github.cantstop.lwjgl3;
 
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
-import io.github.cantstop.Main;
+import io.github.cantstop.frontend.Main;
 
 
 /** Launches the desktop (LWJGL3) application. */
