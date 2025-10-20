@@ -13,14 +13,6 @@ public final class GameConstants {
     // how many to win
     public static final int TO_WIN = 3;
 
-    // Column statuses (0=open, 1=red locked, 2=blue locked)
-    public static final int STATUS_OPEN = 0;
-    public static final int STATUS_LOCKED_RED = 1;
-    public static final int STATUS_LOCKED_BLUE = 2;
-
-    // Special value for "no runners" in temp[]
-    public static final int TEMP_NONE = -1;
-
     // Max column heights for sums 2..12 (index = sum - 2)
     private static final int[] MAX_COLUMN_HEIGHTS = {
         3, 5, 7, 9, 11, 13, 11, 9, 7, 5, 3

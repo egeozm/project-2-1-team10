@@ -5,7 +5,7 @@ import java.util.Random;
 
 public class SimulationDemo {
     public static void main(String[] args) {
-        GameState state = new GameState(Player.BLUE);
+        GameState state = GameState.initialize(Player.BLUE);
         Random rng = new Random(42);
 
         while (true) {
@@ -31,13 +31,12 @@ public class SimulationDemo {
                     TurnManager.stop(state);
                 } else {
                     System.out.println("Decision: CONTINUE");
-                    TurnManager.continueTurn(state);
                 }
             }
 
             // Check win
-            if (state.isWin(Player.RED) || state.isWin(Player.BLUE)) {
-                if (state.isWin(Player.RED)) {
+            if (TurnManager.checkWinCondition(state, Player.RED) || TurnManager.checkWinCondition(state, Player.BLUE)) {
+                if (TurnManager.checkWinCondition(state, Player.RED)) {
                     System.out.println("Winner: RED");
                 } else {
                     System.out.println("Winner: BLUE");

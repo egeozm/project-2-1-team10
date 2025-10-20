@@ -217,7 +217,7 @@ public class PlayScreen implements Screen {
         diceFaces = assets.diceTextures;
 
         // fresh game
-        gameState = new GameState(Player.BLUE);
+        gameState = GameState.initialize(Player.BLUE);
     }
 
     @Override
