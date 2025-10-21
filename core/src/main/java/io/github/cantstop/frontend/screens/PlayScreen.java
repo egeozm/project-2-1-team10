@@ -2,21 +2,24 @@ package io.github.cantstop.frontend.screens;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.Timer;
-import io.github.cantstop.frontend.DiceRow;
+
 import io.github.cantstop.frontend.GameAssets;
-import io.github.cantstop.frontend.Instructions;
 import io.github.cantstop.frontend.Main;
+import io.github.cantstop.frontend.SharedSkin;
 import io.github.cantstop.backend.*;
-import io.github.cantstop.backend.TurnManager;
-import io.github.cantstop.backend.GameConstants;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,175 +34,111 @@ public class PlayScreen implements Screen {
     private static final float ORIGIN_Y = 60f;
     private static final float CELL_W = 24f;
     private static final float CELL_H = 18f;
+    private static final float MARKER_SIZE = 18f;
 
-    private static float colX(int col) {
-        return ORIGIN_X + col * CELL_W + 4f;
-    }
-
-    private static float rowY(int step) {
-        return ORIGIN_Y + step * CELL_H + 1f;
-    }
+    private static float colX(int col) { return ORIGIN_X + col * CELL_W + 4f; }
+    private static float rowY(int step) { return ORIGIN_Y + step * CELL_H + 1f; }
 
     // Backend game model
     private GameState gameState;
+    private final Random rng = new Random();
 
     // Assets
     private GameAssets assets;
-    private Texture[] diceFaces;
     private Texture board;
-    private Texture blueMarker1, blueMarker2, blueCross;
+    private Texture[] diceFaces;
     private Texture redMarker1, redMarker2, redCross;
+    private Texture blueMarker1, blueMarker2, blueCross;
 
     // UI
     private Stage stage;
     private Skin skin;
     private TextButton rollButton;
-    private TextButton passButton;
-    private TextButton instructionsButton;
-
-    private final List<TextButton> optionButtons = new ArrayList<>();
-
-    private Instructions instructions;
-    private boolean showInstructions = false;
+    private TextButton stopButton;
+    private TextButton menuButton;
+    private final List<TextButton> moveButtons = new ArrayList<>();
+    private Label statusLabel;
+    private BitmapFont font;
+    private ShapeRenderer shapeRenderer;
 
     // Dice animation + result
     private boolean rolling = false;
     private DiceRoll currentRoll = null;
-    private int[] rolledDice = null; // 4 dice faces
-    private final Random rng = new Random();
-    private final List<DiceRow> optionDiceRows = new ArrayList<>();
+    private int[] rolledDice = null;
+    private List<Move> legalMoves = null;
+
+    private boolean gameOver = false;
 
     public PlayScreen(Main game) {
         this.game = game;
 
         stage = new Stage();
-        skin = new Skin(Gdx.files.internal("uiskin.json"));
+        skin = SharedSkin.getSkin();
+        font = new BitmapFont();
+        font.getData().setScale(0.8f);
+        shapeRenderer = new ShapeRenderer();
         Gdx.input.setInputProcessor(stage);
 
-        instructions = new Instructions(blueCross); // placeholder texture
+        Table statusTable = new Table();
+        statusTable.setFillParent(true);
+        statusTable.bottom().left();
+        statusTable.pad(5);
+
+        statusLabel = new Label("", skin);
+        statusLabel.setFontScale(0.7f);
+        statusTable.add(statusLabel);
+        stage.addActor(statusTable);
+
+        Table buttonTable = new Table();
+        buttonTable.setFillParent(true);
+        buttonTable.bottom().right();
+        buttonTable.pad(5);
 
         rollButton = new TextButton("Roll", skin);
-        rollButton.setSize(120, 50);
-        rollButton.setPosition(500, 200);
+        rollButton.getLabel().setFontScale(0.5f);
+        rollButton.getStyle().up = null;
+        rollButton.getStyle().down = null;
+        rollButton.getStyle().over = null;
         rollButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                startDiceAnimation();
+                if (!gameOver && gameState.getTurnPhase() == TurnPhase.ROLL_OR_STOP) {
+                    startDiceAnimation();
+                }
             }
         });
-        stage.addActor(rollButton);
 
-        passButton = new TextButton("Pass", skin);
-        passButton.setSize(120, 50);
-        passButton.setPosition(500, 120);
-        passButton.addListener(new ClickListener() {
-            @Override public void clicked(InputEvent event, float x, float y) {
-                switchPlayer();
-            } });
-        stage.addActor(passButton);
-
-        instructionsButton = new TextButton("Instructions", skin);
-        instructionsButton.setSize(120, 50);
-        instructionsButton.setPosition(500, 60);
-        instructionsButton.addListener(new ClickListener() {
-            @Override public void clicked(InputEvent event, float x, float y) {
-                showInstructions = !showInstructions;
-            } });
-        stage.addActor(instructionsButton);
-    }
-
-    private void switchPlayer() {
-        clearOptionButtons();
-        optionDiceRows.clear();
-        currentRoll = null;
-        rolledDice = null;
-        Player next = (gameState.getCurrentPlayer() == Player.BLUE) ? Player.RED : Player.BLUE;
-        gameState.setCurrentPlayer(next);
-    }
-
-    private void startDiceAnimation() {
-        clearOptionButtons();
-        optionDiceRows.clear();
-
-        if (rollButton.hasParent()) {
-            rollButton.remove();
-        }
-
-        currentRoll = DiceRoll.roll(rng);
-        rolledDice = null;
-        rolling = true;
-
-        // Stop animation after 1s and show the real dice
-        Timer.schedule(new Timer.Task() {
+        stopButton = new TextButton("Stop", skin);
+        stopButton.getLabel().setFontScale(0.5f);
+        stopButton.getStyle().up = null;
+        stopButton.getStyle().down = null;
+        stopButton.getStyle().over = null;
+        stopButton.addListener(new ClickListener() {
             @Override
-            public void run() {
-                rolling = false;
-                rolledDice = currentRoll.dice();
-                showOptions();
-            }
-        }, 1.0f);
-    }
-
-    private void showOptions() {
-
-        List<Move> legalMoves = TurnManager.getLegalMoves(gameState, currentRoll);
-        optionDiceRows.clear();
-        if (legalMoves.isEmpty()) {
-            System.out.println("Bust! Switching turn.");
-            gameState.setBustPending(true);
-            TurnManager.stop(gameState); // auto stop on bust
-            resetForNextRoll();
-            return;
-        }
-
-        float startY = 200;
-        float rowSpacing = 100f;
-        float diceSize = 32;
-        float gap = 20;
-
-        for (int i = 0; i < legalMoves.size(); i++) {
-            Move move = legalMoves.get(i);
-
-            float diceY = startY - i * rowSpacing;
-            float diceStartX = 200f;
-
-            int[] pairingDice = currentRoll.getPairing(move.pairingIndex());
-            // Each legal move gets its own DiceRow (3 rows max)
-            optionDiceRows.add(new DiceRow(pairingDice, diceStartX, diceY, diceSize, gap, i));
-
-
-            TextButton option = new TextButton("Advance on " + move.sumA() + " & " + move.sumB(), skin);
-            option.setSize(200, 40);
-            option.setPosition(diceStartX + 200f, diceY);
-
-            option.addListener(new ClickListener() {
-                @Override
-                public void clicked(InputEvent event, float x, float y) {
-                    TurnManager.applyMove(gameState, move);
-                    resetForNextRoll();
+            public void clicked(InputEvent event, float x, float y) {
+                if (!gameOver && gameState.getTurnPhase() == TurnPhase.ROLL_OR_STOP
+                    && gameState.countActiveColumns() > 0) {
+                    handleStop();
                 }
-            });
+            }
+        });
 
-            optionButtons.add(option);
-            stage.addActor(option);
-        }
-    }
+        menuButton = new TextButton("Menu", skin);
+        menuButton.getLabel().setFontScale(0.5f);
+        menuButton.getStyle().up = null;
+        menuButton.getStyle().down = null;
+        menuButton.getStyle().over = null;
+        menuButton.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                game.setScreen(new MenuScreen(game));
+            }
+        });
 
-    private void clearOptionButtons() {
-        for (TextButton b : optionButtons) {
-            if (b.hasParent()) b.remove();
-        }
-        optionButtons.clear();
-    }
-
-    private void resetForNextRoll() {
-        clearOptionButtons();
-        optionDiceRows.clear();
-        if (!rollButton.hasParent()) {
-            stage.addActor(rollButton);
-        }
-        currentRoll = null;
-        rolledDice = null;
+        buttonTable.add(rollButton).size(60, 30).pad(8);
+        buttonTable.add(stopButton).size(60, 30).pad(8);
+        buttonTable.add(menuButton).size(60, 30).pad(8);
+        stage.addActor(buttonTable);
     }
 
     @Override
@@ -208,73 +147,300 @@ public class PlayScreen implements Screen {
         assets.loadAll();
 
         board = assets.board;
-        blueMarker1 = assets.blueMarker1;
-        blueMarker2 = assets.blueMarker2;
-        blueCross = assets.blueCross;
+        diceFaces = assets.diceTextures;
+
         redMarker1 = assets.redMarker1;
         redMarker2 = assets.redMarker2;
         redCross = assets.redCross;
-        diceFaces = assets.diceTextures;
 
-        // fresh game
-        gameState = GameState.initialize(Player.BLUE);
+        blueMarker1 = assets.blueMarker1;
+        blueMarker2 = assets.blueMarker2;
+        blueCross = assets.blueCross;
+
+        gameState = GameState.initialize(Player.RED);
+        updateStatusLabels();
+    }
+
+    private void startDiceAnimation() {
+        if (rolling || gameOver) return;
+
+        clearMoveButtons();
+        rolling = true;
+        updateStatusLabels();
+
+        currentRoll = DiceRoll.roll(rng);
+        rolledDice = null;
+
+        // Stop animation after 1s and show the real dice
+        Timer.schedule(new Timer.Task() {
+            @Override
+            public void run() {
+                rolling = false;
+                rolledDice = currentRoll.dice();
+                handleRollResult();
+            }
+        }, 1.0f);
+    }
+
+    private void handleRollResult() {
+        legalMoves = TurnManager.getLegalMoves(gameState, currentRoll);
+
+        if (legalMoves.isEmpty()) {
+            // bust
+            Player bustedPlayer = gameState.getCurrentPlayer(); // save game state of player before busting
+            TurnManager.bust(gameState);
+            statusLabel.setText(bustedPlayer + " BUSTED!");
+
+            // 4 seocnds break before switching to next player
+            Timer.schedule(new Timer.Task() {
+                @Override
+                public void run() {
+                    currentRoll = null;
+                    rolledDice = null;
+                    updateStatusLabels();
+                }
+            }, 4.0f);
+        } else {
+            TurnManager.noBust(gameState);
+            showMoveOptions();
+            updateStatusLabels();
+        }
+    }
+
+    private void showMoveOptions() {
+        clearMoveButtons();
+
+        int[][] pairings = currentRoll.pairings();
+
+        float startX = 525;
+        float startY = 150;
+        float spacing = 40;
+
+        for (int i = 0; i < legalMoves.size(); i++) {
+            Move move = legalMoves.get(i);
+            int sumA = move.sumA();
+            int sumB = move.sumB();
+
+            String btnText = String.format("%d + %d", sumA, sumB);
+
+            TextButton moveBtn = new TextButton(btnText, skin);
+            moveBtn.getLabel().setFontScale(0.5f);
+            moveBtn.getStyle().up = null;
+            moveBtn.getStyle().down = null;
+            moveBtn.getStyle().over = null;
+            moveBtn.setSize(80, 30);
+            moveBtn.setPosition(startX, startY - i * spacing);
+
+            final Move selectedMove = move;
+            moveBtn.addListener(new ClickListener() {
+                @Override
+                public void clicked(InputEvent event, float x, float y) {
+                    handleMoveSelection(selectedMove);
+                }
+            });
+
+            moveButtons.add(moveBtn);
+            stage.addActor(moveBtn);
+        }
+    }
+
+    private void handleMoveSelection(Move move) {
+        if (gameOver) return;
+
+        TurnManager.applyMove(gameState, move);
+        clearMoveButtons();
+        currentRoll = null;
+        rolledDice = null;
+        legalMoves = null;
+
+        if (checkWin()) {
+            return;
+        }
+
+        updateStatusLabels();
+    }
+
+    private void handleStop() {
+        if (gameOver || gameState.countActiveColumns() == 0) return;
+
+        TurnManager.stop(gameState);
+        clearMoveButtons();
+        currentRoll = null;
+        rolledDice = null;
+        legalMoves = null;
+
+        if (checkWin()) {
+            return;
+        }
+
+        updateStatusLabels();
+    }
+
+    private boolean checkWin() {
+        Player winner = null;
+        if (TurnManager.checkWinCondition(gameState, Player.RED)) {
+            winner = Player.RED;
+        } else if (TurnManager.checkWinCondition(gameState, Player.BLUE)) {
+            winner = Player.BLUE;
+        }
+
+        if (winner != null) {
+            gameOver = true;
+            statusLabel.setText(winner + " WINS!");
+            rollButton.setDisabled(true);
+            stopButton.setDisabled(true);
+            clearMoveButtons();
+            return true;
+        }
+        return false;
+    }
+
+    private void clearMoveButtons() {
+        for (TextButton b : moveButtons) {
+            if (b.hasParent()) b.remove();
+        }
+        moveButtons.clear();
+    }
+
+    private void updateStatusLabels() {
+        if (gameOver) return;
+
+        Player current = gameState.getCurrentPlayer();
+        TurnPhase phase = gameState.getTurnPhase();
+        int activeColumns = gameState.countActiveColumns();
+
+        int redWins = countCompletedColumns(Player.RED);
+        int blueWins = countCompletedColumns(Player.BLUE);
+
+        String status = String.format("%s | R:%d B:%d A:%d",
+            current, redWins, blueWins, activeColumns);
+        statusLabel.setText(status);
+
+        rollButton.setDisabled(phase != TurnPhase.ROLL_OR_STOP || rolling);
+        stopButton.setDisabled(phase != TurnPhase.ROLL_OR_STOP || activeColumns == 0 || rolling);
+    }
+
+    private int countCompletedColumns(Player player) {
+        int count = 0;
+        for (int col = 0; col < GameConstants.NUM_COLS; col++) {
+            int sum = GameConstants.columnToSum(col);
+            int maxHeight = GameConstants.maxHeight(sum);
+            if (gameState.getMarkerHeight(player, col) == maxHeight) {
+                count++;
+            }
+        }
+        return count;
     }
 
     @Override
     public void render(float delta) {
-        ScreenUtils.clear(0f, 0f, 0f, 1f);
+        ScreenUtils.clear(0.1f, 0.1f, 0.15f, 1f);
+
+        // keyboard control for game
+        if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.SPACE)) {
+            if (!gameOver && gameState.getTurnPhase() == TurnPhase.ROLL_OR_STOP && !rolling) {
+                startDiceAnimation();
+            }
+        }
+        if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.ENTER)) {
+            if (!gameOver && gameState.getTurnPhase() == TurnPhase.ROLL_OR_STOP
+                && gameState.countActiveColumns() > 0 && !rolling) {
+                handleStop();
+            }
+        }
+        if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.ESCAPE)) {
+            game.setScreen(new MenuScreen(game));
+        }
 
         game.viewport.apply();
         game.batch.setProjectionMatrix(game.viewport.getCamera().combined);
         game.batch.begin();
 
-        // --- Board drawing ---
         game.batch.draw(board, ORIGIN_X, ORIGIN_Y);
 
+        // drawing permanent markers and temp runners
         for (int col = 0; col < GameConstants.NUM_COLS; col++) {
-            game.font.draw(game.batch, Integer.toString(col+2), colX(col)+4f, rowY(GameConstants.MAX_COLUMN_HEIGHTS[col])-4f);
-        }
+            int sum = GameConstants.columnToSum(col);
+            int maxHeight = GameConstants.maxHeight(sum);
 
-        for (int col = 0; col < GameConstants.NUM_COLS; col++) {
-            ColumnState cs = gameState.columns()[col];
+            // permanent red markers
+            int redH = gameState.redPermAtCol(col);
+            if (redH > 0) {
+                Texture marker = (redH == maxHeight) ? redCross : redMarker1;
+                game.batch.draw(marker, colX(col) - 2, rowY(redH - 1), MARKER_SIZE, MARKER_SIZE);
+            }
 
-            // --- Permanent markers ---
-            int blueHeight = cs.permHeightFor(Player.BLUE);
-            int redHeight  = cs.permHeightFor(Player.RED);
-            if (blueHeight > 0) game.batch.draw(blueMarker1, colX(col), rowY(blueHeight));
-            if (redHeight  > 0) game.batch.draw(redMarker1, colX(col), rowY(redHeight));
+            // permanent blue markers
+            int blueH = gameState.bluePermAtCol(col);
+            if (blueH > 0) {
+                Texture marker = (blueH == maxHeight) ? blueCross : blueMarker1;
+                game.batch.draw(marker, colX(col) + CELL_W - MARKER_SIZE + 2,
+                    rowY(blueH - 1), MARKER_SIZE, MARKER_SIZE);
+            }
 
-            // --- Temp runner for active player ---
-            Integer tempHeight = cs.tempHeight();
-            if (tempHeight != null) {
-                Texture tex = (gameState.getCurrentPlayer() == Player.BLUE) ? blueMarker2 : redMarker2;
-                game.batch.draw(tex, colX(col), rowY(tempHeight));
+            // temporary runners
+            int tempH = gameState.tempAtCol(col);
+            if (tempH > 0) {
+                Player current = gameState.getCurrentPlayer();
+                Texture tempMarker = (current == Player.RED) ? redMarker2 : blueMarker2;
+                float tempX = colX(col) + CELL_W / 2 - MARKER_SIZE / 2;
+                game.batch.draw(tempMarker, tempX, rowY(tempH - 1), MARKER_SIZE, MARKER_SIZE);
             }
         }
 
-        // --- Dice drawing ---
+        font.setColor(Color.WHITE);
+        for (int col = 0; col < GameConstants.NUM_COLS; col++) {
+            int sum = GameConstants.columnToSum(col);
+            font.draw(game.batch, String.valueOf(sum),
+                colX(col) + CELL_W / 2 - 5, ORIGIN_Y - 10);
+        }
+
+        // drawing the dice on the right side
         if (rolling) {
-            // Animate just 4 dice in one row
-            float diceY = 100;
-            float diceStartX = 200;
-            float diceSize = 64f;
-            float gap = 20f;
+            float diceY = 200;
+            float diceStartX = 350;
+            float diceSize = 35f;
+            float gap = 10f;
             for (int i = 0; i < 4; i++) {
                 int randomFace = rng.nextInt(6);
-                game.batch.draw(diceFaces[randomFace], diceStartX + i * (diceSize + gap), diceY, diceSize, diceSize);
+                game.batch.draw(diceFaces[randomFace],
+                    diceStartX + (i % 2) * (diceSize + gap),
+                    diceY - (i / 2) * (diceSize + gap),
+                    diceSize, diceSize);
             }
-        } else if (rolledDice != null) {
-            // Show combinations in rows
-            for (DiceRow row : optionDiceRows) {
-                row.draw(game.batch, diceFaces);
-            }
-        }
+        } else if (rolledDice != null && currentRoll != null) {
+            // show the rolled dice in a 2x2 grid
+            float diceY = 200;
+            float diceStartX = 350;
+            float diceSize = 35f;
+            float gap = 10f;
 
-        if (showInstructions) {
-            instructions.draw(game.batch, game.font);
+            for (int i = 0; i < 4; i++) {
+                float x = diceStartX + (i % 2) * (diceSize + gap);
+                float y = diceY - (i / 2) * (diceSize + gap);
+                game.batch.draw(diceFaces[rolledDice[i] - 1], x, y, diceSize, diceSize);
+            }
         }
 
         game.batch.end();
+
+        // black backgrounds for buttons
+        shapeRenderer.setProjectionMatrix(stage.getCamera().combined);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        shapeRenderer.setColor(0, 0, 0, 0.8f);
+
+        shapeRenderer.rect(rollButton.getX(), rollButton.getY(),
+            rollButton.getWidth(), rollButton.getHeight());
+        shapeRenderer.rect(stopButton.getX(), stopButton.getY(),
+            stopButton.getWidth(), stopButton.getHeight());
+        shapeRenderer.rect(menuButton.getX(), menuButton.getY(),
+            menuButton.getWidth(), menuButton.getHeight());
+
+        for (TextButton btn : moveButtons) {
+            shapeRenderer.rect(btn.getX(), btn.getY(), btn.getWidth(), btn.getHeight());
+        }
+
+        shapeRenderer.end();
 
         stage.act(delta);
         stage.draw();
@@ -282,15 +448,21 @@ public class PlayScreen implements Screen {
 
     @Override
     public void resize(int width, int height) {
+        game.viewport.update(width, height, true);
         stage.getViewport().update(width, height, true);
     }
 
     @Override public void pause() {}
     @Override public void resume() {}
     @Override public void hide() {}
+
     @Override
     public void dispose() {
         stage.dispose();
-        skin.dispose();
+        font.dispose();
+        shapeRenderer.dispose();
+        if (assets != null) {
+            assets.dispose();
+        }
     }
 }
