@@ -10,7 +10,8 @@ import java.util.Random;
  */
 public final class TurnManager {
 
-    private TurnManager() {} // utility class
+    private TurnManager() {
+    } // utility class
 
     // ------------------------------------------------------------------------
     //  Phase 1: Stop or Roll
@@ -38,6 +39,10 @@ public final class TurnManager {
     // but there is probably a simpler way to do this
 
     // Find all legal pairings (moves) for the current roll and game state and save them in a list
+    // Rule-of-thumb:
+    // - If using BOTH sums is legal, you MUST offer only the "both" move (rules require using both if possible).
+    // - If only one of the two sums is playable, offer that single.
+    // - If both are individually playable but together would violate MAX_TEMP_RUNNERS, offer BOTH singles.
     public static List<Move> getLegalMoves(GameState s, DiceRoll r) {
         int[][] p = r.pairings();          // all 3 possible pairings
         List<Move> moves = new ArrayList<>(3);
@@ -45,12 +50,64 @@ public final class TurnManager {
         for (int i = 0; i < 3; i++) {
             int a = p[i][0];
             int b = p[i][1];
+            boolean aOK = canUseSingle(s, a);
+            boolean bOK = canUseSingle(s, b);
+            boolean bothOK = aOK && bOK && canUseBoth(s, a, b);
 
-            if (canUsePairing(s, a, b)) {
-                moves.add(new Move(i, a, b)); // add if legal
+            if (bothOK) {
+                // Must use both if possible
+                moves.add(new Move(i, a, b));
+                continue;
             }
+
+            if (aOK && !bOK) {
+                // Only A is legal
+                moves.add(new Move(i, a, 0));
+            } else if (!aOK && bOK) {
+                // Only B is legal
+                moves.add(new Move(i, 0, b));
+            } else if (aOK && bOK) {
+                // Both individually legal but not together (runner-capacity issue)
+                moves.add(new Move(i, a, 0));
+                moves.add(new Move(i, 0, b));
+            }
+            // else: nothing from this pairing is legal
         }
+
         return moves;
+    }
+
+    // Single-sum feasibility: can we advance 'sum' by 1 step right now?
+    private static boolean canUseSingle(GameState s, int sum) {
+        int col = GameConstants.sumToColumnID(sum);
+        if (s.isColumnLocked(col)) return false;
+
+        // Advancing an already active temp runner is always fine.
+        if (s.isColumnActive(col)) return true;
+
+        // Otherwise we'd open a new temp runner. Check capacity.
+        int active = s.countActiveColumns();
+        return active + 1 <= GameConstants.MAX_TEMP_RUNNERS;
+    }
+
+    // Pair feasibility when using BOTH sums in this roll.
+    private static boolean canUseBoth(GameState s, int sumA, int sumB) {
+        int colA = GameConstants.sumToColumnID(sumA);
+        int colB = GameConstants.sumToColumnID(sumB);
+
+        // If both columns are locked, obviously no.
+        if (s.isColumnLocked(colA) && s.isColumnLocked(colB)) return false;
+
+        int active = s.countActiveColumns();
+        int newRunners = 0;
+
+        // Opening a new runner for colA?
+        if (!s.isColumnLocked(colA) && !s.isColumnActive(colA)) newRunners++;
+
+        // Opening a new runner for colB? Don't double-count same column.
+        if (!s.isColumnLocked(colB) && !s.isColumnActive(colB) && colA != colB) newRunners++;
+
+        return active + newRunners <= GameConstants.MAX_TEMP_RUNNERS;
     }
 
     public static List<Move> getIllegalMoves(GameState s, DiceRoll r) {
@@ -91,8 +148,8 @@ public final class TurnManager {
 
     // Apply chosen pairing (raise TEMP runners in the right columns)
     public static void applyMove(GameState s, Move m) {
-        advanceOne(s, m.sumA());
-        advanceOne(s, m.sumB());
+        if (m.sumA() > 0) advanceOne(s, m.sumA());
+        if (m.sumB() > 0) advanceOne(s, m.sumB());
         s.setTurnPhase(TurnPhase.ROLL_OR_STOP);
     }
 

@@ -21,9 +21,7 @@ import io.github.cantstop.frontend.Main;
 import io.github.cantstop.frontend.SharedSkin;
 import io.github.cantstop.backend.*;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 public class PlayScreen implements Screen {
 
@@ -36,8 +34,13 @@ public class PlayScreen implements Screen {
     private static final float CELL_H = 18f;
     private static final float MARKER_SIZE = 18f;
 
-    private static float colX(int col) { return ORIGIN_X + col * CELL_W + 4f; }
-    private static float rowY(int step) { return ORIGIN_Y + step * CELL_H + 1f; }
+    private static float colX(int col) {
+        return ORIGIN_X + col * CELL_W + 4f;
+    }
+
+    private static float rowY(int step) {
+        return ORIGIN_Y + step * CELL_H + 1f;
+    }
 
     // Backend game model
     private GameState gameState;
@@ -157,6 +160,29 @@ public class PlayScreen implements Screen {
         updateStatusLabels();
     }
 
+    // Build a canonical key for a move: order doesn't matter (5+8 == 8+5).
+    private static String moveKey(Move m) {
+        int a = m.sumA(), b = m.sumB();
+        if (a == 0 || b == 0) return Integer.toString(a + b); // single move
+        int x = Math.min(a, b), y = Math.max(a, b);
+        return x + "+" + y;
+    }
+
+    // Remove duplicates while preserving the first occurrence and order.
+    private static List<Move> dedupeMoves(List<Move> moves) {
+        if (moves == null || moves.isEmpty()) return moves;
+        Map<String, Move> unique = new LinkedHashMap<>();
+        for (Move m : moves) unique.putIfAbsent(moveKey(m), m);
+        return new ArrayList<>(unique.values());
+    }
+
+    private String formatMoveLabel(Move m) {
+        int a = m.sumA(), b = m.sumB();
+        if (a == 0 || b == 0) return String.valueOf(a + b); // single
+        return a + " + " + b;                               // both
+    }
+
+
     private void startDiceAnimation() {
         if (rolling || gameOver) return;
 
@@ -196,6 +222,9 @@ public class PlayScreen implements Screen {
     private void handleRollResult() {
         legalMoves = TurnManager.getLegalMoves(gameState, currentRoll);
         illegalMoves = TurnManager.getIllegalMoves(gameState, currentRoll);
+        // Kill duplicate sum-pairs before rendering
+        legalMoves  = dedupeMoves(legalMoves);
+        illegalMoves = dedupeMoves(illegalMoves);
 
         if (legalMoves.isEmpty()) {
             // bust
@@ -242,12 +271,10 @@ public class PlayScreen implements Screen {
         if (!legalMoves.isEmpty()) {
             for (int i = 0; i < legalMoves.size(); i++) {
                 Move move = legalMoves.get(i);
-                int sumA = move.sumA();
-                int sumB = move.sumB();
-
-                String btnText = String.format("%d + %d", sumA, sumB);
-
+                String btnText = formatMoveLabel(move);
                 TextButton moveBtn = new TextButton(btnText, skin);
+
+
                 moveBtn.setSize(120, 50);
                 moveBtn.setPosition(startX, startY - i * spacing);
 
@@ -265,25 +292,23 @@ public class PlayScreen implements Screen {
                 moveButtons.add(moveBtn);
                 stage.addActor(moveBtn);
             }
-        }
-        else
-        {
+        } else {
 
-                for (int i = 0; i < illegalMoves.size(); i++) {
-                    Move move = illegalMoves.get(i);
-                    int sumA = move.sumA();
-                    int sumB = move.sumB();
+            for (int i = 0; i < illegalMoves.size(); i++) {
+                Move move = illegalMoves.get(i);
 
-                    String btnText = String.format("%d + %d", sumA, sumB);
-                    TextButton moveBtn = new TextButton(btnText, skin);
-                    moveBtn.setSize(120, 50);
-                    moveBtn.setPosition(startX, startY - i * spacing);
-                    moveBtn.setDisabled(true);
-                    moveBtn.getLabel().setColor(Color.GRAY);
+                String btnText = formatMoveLabel(move);
+                TextButton moveBtn = new TextButton(btnText, skin);
 
-                    moveButtons.add(moveBtn);
-                    stage.addActor(moveBtn);
-                }
+                moveBtn.setSize(120, 50);
+                moveBtn.setPosition(startX, startY - i * spacing);
+                moveBtn.setDisabled(true);
+                moveBtn.getLabel().setAlignment(com.badlogic.gdx.utils.Align.center);
+
+
+                moveButtons.add(moveBtn);
+                stage.addActor(moveBtn);
+            }
 
         }
 
@@ -497,9 +522,17 @@ public class PlayScreen implements Screen {
         stage.getViewport().update(width, height, true);
     }
 
-    @Override public void pause() {}
-    @Override public void resume() {}
-    @Override public void hide() {}
+    @Override
+    public void pause() {
+    }
+
+    @Override
+    public void resume() {
+    }
+
+    @Override
+    public void hide() {
+    }
 
     @Override
     public void dispose() {
