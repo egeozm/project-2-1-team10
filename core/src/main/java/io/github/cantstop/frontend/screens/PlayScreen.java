@@ -58,6 +58,7 @@ public class PlayScreen implements Screen {
     private TextButton menuButton;
     private final List<TextButton> moveButtons = new ArrayList<>();
     private Label statusLabel;
+    private Label combinationsLabel;
     private BitmapFont font;
     private ShapeRenderer shapeRenderer;
 
@@ -66,6 +67,7 @@ public class PlayScreen implements Screen {
     private DiceRoll currentRoll = null;
     private int[] rolledDice = null;
     private List<Move> legalMoves = null;
+    private List<Move> illegalMoves = new ArrayList<>();
 
     private boolean gameOver = false;
 
@@ -94,11 +96,12 @@ public class PlayScreen implements Screen {
         buttonTable.bottom().right();
         buttonTable.pad(5);
 
+        Table menuTable = new Table();
+        menuTable.setFillParent(true);
+        menuTable.top().left();
+        menuTable.pad(5);
+
         rollButton = new TextButton("Roll", skin);
-        rollButton.getLabel().setFontScale(0.5f);
-        rollButton.getStyle().up = null;
-        rollButton.getStyle().down = null;
-        rollButton.getStyle().over = null;
         rollButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
@@ -109,10 +112,6 @@ public class PlayScreen implements Screen {
         });
 
         stopButton = new TextButton("Stop", skin);
-        stopButton.getLabel().setFontScale(0.5f);
-        stopButton.getStyle().up = null;
-        stopButton.getStyle().down = null;
-        stopButton.getStyle().over = null;
         stopButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
@@ -124,10 +123,6 @@ public class PlayScreen implements Screen {
         });
 
         menuButton = new TextButton("Menu", skin);
-        menuButton.getLabel().setFontScale(0.5f);
-        menuButton.getStyle().up = null;
-        menuButton.getStyle().down = null;
-        menuButton.getStyle().over = null;
         menuButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
@@ -135,10 +130,11 @@ public class PlayScreen implements Screen {
             }
         });
 
-        buttonTable.add(rollButton).size(60, 30).pad(8);
-        buttonTable.add(stopButton).size(60, 30).pad(8);
-        buttonTable.add(menuButton).size(60, 30).pad(8);
+        buttonTable.add(rollButton).size(120, 50).pad(8);
+        buttonTable.add(stopButton).size(120, 50).pad(8);
+        menuTable.add(menuButton).size(120, 50).pad(8);
         stage.addActor(buttonTable);
+        stage.addActor(menuTable);
     }
 
     @Override
@@ -165,6 +161,11 @@ public class PlayScreen implements Screen {
         if (rolling || gameOver) return;
 
         clearMoveButtons();
+
+        if (combinationsLabel != null) {
+            combinationsLabel.setVisible(false);
+        }
+
         rolling = true;
         updateStatusLabels();
 
@@ -178,18 +179,31 @@ public class PlayScreen implements Screen {
                 rolling = false;
                 rolledDice = currentRoll.dice();
                 handleRollResult();
+
+                if (legalMoves != null && !legalMoves.isEmpty() && combinationsLabel != null) {
+                    combinationsLabel.setText("Possible Combinations:");
+                    combinationsLabel.setColor(Color.WHITE);
+                    combinationsLabel.setVisible(true);
+                } else if (legalMoves != null && legalMoves.isEmpty() && combinationsLabel != null) {
+                    combinationsLabel.setText("You BUSTEEEEEDDD!");
+                    combinationsLabel.setColor(Color.RED);
+                    combinationsLabel.setVisible(true);
+                }
             }
         }, 1.0f);
     }
 
     private void handleRollResult() {
         legalMoves = TurnManager.getLegalMoves(gameState, currentRoll);
+        illegalMoves = TurnManager.getIllegalMoves(gameState, currentRoll);
 
         if (legalMoves.isEmpty()) {
             // bust
             Player bustedPlayer = gameState.getCurrentPlayer(); // save game state of player before busting
             TurnManager.bust(gameState);
             statusLabel.setText(bustedPlayer + " BUSTED!");
+
+            showMoveOptions();
 
             // 4 seocnds break before switching to next player
             Timer.schedule(new Timer.Task() {
@@ -213,35 +227,66 @@ public class PlayScreen implements Screen {
         int[][] pairings = currentRoll.pairings();
 
         float startX = 525;
-        float startY = 150;
-        float spacing = 40;
+        float startY = 300;
+        float spacing = 80;
 
-        for (int i = 0; i < legalMoves.size(); i++) {
-            Move move = legalMoves.get(i);
-            int sumA = move.sumA();
-            int sumB = move.sumB();
-
-            String btnText = String.format("%d + %d", sumA, sumB);
-
-            TextButton moveBtn = new TextButton(btnText, skin);
-            moveBtn.getLabel().setFontScale(0.5f);
-            moveBtn.getStyle().up = null;
-            moveBtn.getStyle().down = null;
-            moveBtn.getStyle().over = null;
-            moveBtn.setSize(80, 30);
-            moveBtn.setPosition(startX, startY - i * spacing);
-
-            final Move selectedMove = move;
-            moveBtn.addListener(new ClickListener() {
-                @Override
-                public void clicked(InputEvent event, float x, float y) {
-                    handleMoveSelection(selectedMove);
-                }
-            });
-
-            moveButtons.add(moveBtn);
-            stage.addActor(moveBtn);
+        //intialize it ig
+        if (combinationsLabel == null) {
+            combinationsLabel = new Label("", skin);
+            combinationsLabel.setFontScale(1f);
+            combinationsLabel.setPosition(startX - 120, startY + 100);
+            stage.addActor(combinationsLabel);
         }
+
+
+        if (!legalMoves.isEmpty()) {
+            for (int i = 0; i < legalMoves.size(); i++) {
+                Move move = legalMoves.get(i);
+                int sumA = move.sumA();
+                int sumB = move.sumB();
+
+                String btnText = String.format("%d + %d", sumA, sumB);
+
+                TextButton moveBtn = new TextButton(btnText, skin);
+                moveBtn.setSize(120, 50);
+                moveBtn.setPosition(startX, startY - i * spacing);
+
+                final Move selectedMove = move;
+                moveBtn.addListener(new ClickListener() {
+                    @Override
+                    public void clicked(InputEvent event, float x, float y) {
+                        handleMoveSelection(selectedMove);
+
+                        //we hide it after we selecet a move;
+                        combinationsLabel.setVisible(false);
+                    }
+                });
+
+                moveButtons.add(moveBtn);
+                stage.addActor(moveBtn);
+            }
+        }
+        else
+        {
+
+                for (int i = 0; i < illegalMoves.size(); i++) {
+                    Move move = illegalMoves.get(i);
+                    int sumA = move.sumA();
+                    int sumB = move.sumB();
+
+                    String btnText = String.format("%d + %d", sumA, sumB);
+                    TextButton moveBtn = new TextButton(btnText, skin);
+                    moveBtn.setSize(120, 50);
+                    moveBtn.setPosition(startX, startY - i * spacing);
+                    moveBtn.setDisabled(true);
+                    moveBtn.getLabel().setColor(Color.GRAY);
+
+                    moveButtons.add(moveBtn);
+                    stage.addActor(moveBtn);
+                }
+
+        }
+
     }
 
     private void handleMoveSelection(Move move) {

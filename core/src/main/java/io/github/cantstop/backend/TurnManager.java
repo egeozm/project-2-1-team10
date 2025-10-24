@@ -53,6 +53,21 @@ public final class TurnManager {
         return moves;
     }
 
+    public static List<Move> getIllegalMoves(GameState s, DiceRoll r) {
+        int[][] p = r.pairings();
+        List<Move> illegal = new ArrayList<>(3);
+
+        for (int i = 0; i < 3; i++) {
+            int a = p[i][0];
+            int b = p[i][1];
+
+            if (!canUsePairing(s, a, b)) {
+                illegal.add(new Move(i, a, b)); // add if legal
+            }
+        }
+        return illegal;
+    }
+
     // True if there are no legal pairings for the current roll
     public static boolean isBust(GameState s, DiceRoll r) {
         return getLegalMoves(s, r).isEmpty();
