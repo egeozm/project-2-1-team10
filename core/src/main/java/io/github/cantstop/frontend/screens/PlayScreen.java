@@ -32,15 +32,7 @@ public class PlayScreen implements Screen {
     private static final float ORIGIN_Y = 60f;
     private static final float CELL_W = 24f;
     private static final float CELL_H = 18f;
-    private static final float MARKER_SIZE = 18f;
-
-    private static float colX(int col) {
-        return ORIGIN_X + col * CELL_W + 4f;
-    }
-
-    private static float rowY(int step) {
-        return ORIGIN_Y + step * CELL_H + 1f;
-    }
+    private static final float MARKER_SIZE = 16f;
 
     // Backend game model
     private GameState gameState;
@@ -202,6 +194,7 @@ public class PlayScreen implements Screen {
         Timer.schedule(new Timer.Task() {
             @Override
             public void run() {
+
                 rolling = false;
                 rolledDice = currentRoll.dice();
                 handleRollResult();
@@ -402,6 +395,14 @@ public class PlayScreen implements Screen {
         return count;
     }
 
+    private static float colX(int col) {
+        return ORIGIN_X + col * CELL_W + 4f;
+    }
+
+    private static float rowY(int step) {
+        return ORIGIN_Y + step * CELL_H + 1f;
+    }
+
     @Override
     public void render(float delta) {
         ScreenUtils.clear(0.1f, 0.1f, 0.15f, 1f);
@@ -428,33 +429,46 @@ public class PlayScreen implements Screen {
 
         game.batch.draw(board, ORIGIN_X, ORIGIN_Y);
 
-        // drawing permanent markers and temp runners
+        // drawing permanent markers and temp runners (and cross out claimed columns)
         for (int col = 0; col < GameConstants.NUM_COLS; col++) {
             int sum = GameConstants.columnToSum(col);
             int maxHeight = GameConstants.maxHeight(sum);
 
-            // permanent red markers
-            int redH = gameState.redPermAtCol(col);
-            if (redH > 0) {
-                Texture marker = (redH == maxHeight) ? redCross : redMarker1;
-                game.batch.draw(marker, colX(col) - 2, rowY(redH - 1), MARKER_SIZE, MARKER_SIZE);
-            }
-
-            // permanent blue markers
-            int blueH = gameState.bluePermAtCol(col);
-            if (blueH > 0) {
-                Texture marker = (blueH == maxHeight) ? blueCross : blueMarker1;
-                game.batch.draw(marker, colX(col) + CELL_W - MARKER_SIZE + 2,
-                    rowY(blueH - 1), MARKER_SIZE, MARKER_SIZE);
-            }
-
-            // temporary runners
+            // marker heights
+            int redH = gameState.getMarkerHeight(Player.RED, col);
+            int blueH = gameState.getMarkerHeight(Player.BLUE, col);
             int tempH = gameState.tempAtCol(col);
-            if (tempH > 0) {
-                Player current = gameState.getCurrentPlayer();
-                Texture tempMarker = (current == Player.RED) ? redMarker2 : blueMarker2;
-                float tempX = colX(col) + CELL_W / 2 - MARKER_SIZE / 2;
-                game.batch.draw(tempMarker, tempX, rowY(tempH - 1), MARKER_SIZE, MARKER_SIZE);
+
+            // cross out column if it has been claimed by a player
+            if (gameState.getMarkerHeight(Player.RED, col) == maxHeight) { // if claimed by RED
+                for (int i = 0; i < maxHeight; i++) {
+                    game.batch.draw(redCross, colX(col), rowY(i));
+                }
+            } else if (gameState.getMarkerHeight(Player.BLUE, col) == maxHeight) { // if claimed by BLUE
+                for (int i = 0; i < maxHeight; i++) {
+                    game.batch.draw(blueCross, colX(col), rowY(i));
+                }
+            } else { // if unclaimed, draw markers
+
+                float xOffset = 0;
+                if (redH == blueH) xOffset = 2; // offset only if they overlap
+
+                // permanent red markers
+                if (redH > 0) {
+                    game.batch.draw(redMarker1, colX(col) - xOffset, rowY(redH - 1), MARKER_SIZE, MARKER_SIZE);
+                }
+
+                // permanent blue markers
+                if (blueH > 0) {
+                    game.batch.draw(blueMarker1, colX(col) + xOffset, rowY(blueH - 1), MARKER_SIZE, MARKER_SIZE);
+                }
+
+                // temporary runners
+                if (tempH > 0) {
+                    Player current = gameState.getCurrentPlayer();
+                    Texture tempMarker = (current == Player.RED) ? redMarker2 : blueMarker2;
+                    game.batch.draw(tempMarker, colX(col), rowY(tempH - 1), MARKER_SIZE, MARKER_SIZE);
+                }
             }
         }
 
