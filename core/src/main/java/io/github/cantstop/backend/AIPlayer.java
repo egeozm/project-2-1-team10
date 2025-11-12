@@ -7,10 +7,10 @@ import java.util.*;
  * - If a dice roll is provided, it evaluates STOP vs ROLL+Move.
  * - ROLL branch is a chance node over all 1296 possible dice outcomes (weighted equally).
  * - If no dice roll is provided, it simulates a ROLL (using the provided RNG) and then evaluates ROLL+Move.
- *
+ * <p>
  * The AI returns either:
- *   - StopAction (commit current temp runners)
- *   - RollAction(Move m) (apply a legal move for the given dice roll)
+ * - StopAction (commit current temp runners)
+ * - RollAction(Move m) (apply a legal move for the given dice roll)
  */
 public final class AIPlayer {
 
@@ -22,6 +22,20 @@ public final class AIPlayer {
     public static final int DEFAULT_DEPTH_AFTER_STOP = 5; // deterministic depth after STOP
 
     private final Random rng;
+
+    // TT + node types
+    private final TranspositionTable tt = new TranspositionTable(20); // ~1M slots
+    private int ttEpoch = 0;
+    private static final byte NODE_MAX = 0, NODE_MIN = 1, NODE_CHANCE = 2;
+
+    // killer move tiny cache (optional but helpful)
+    private final Map<Long, Move> killer = new HashMap<>();
+
+    // bust penalty weight (tune later)
+    private static final double LAMBDA_BUST = 80.0;
+
+    // optional: deadline for timed search
+    private long searchDeadlineNanos = Long.MAX_VALUE;
 
     public AIPlayer() {
         this(new Random());
@@ -43,20 +57,30 @@ public final class AIPlayer {
      * Same as chooseAction, but allows specifying custom depths.
      */
     public Action chooseAction(GameState state, DiceRoll diceRoll, int rollDepth, int stopDepth) {
-        if (diceRoll == null) {
-            diceRoll = DiceRoll.roll(rng);
-        }
-
-        // Evaluate STOP now
-        double stopScore = evalStop(state, stopDepth);
-
-        // Evaluate ROLL + best Move via expectiminimax
-        double rollScore = evalRoll(state, diceRoll, rollDepth);
-
-        if (stopScore + EPS >= rollScore) {
-            return StopAction.INSTANCE;
-        } else {
+        if (diceRoll != null) {
+            // We already know the roll: compare STOP vs ROLL+best move for THIS roll
+            double stopScore = evalStop(state, stopDepth);
+            double rollScore = evalRoll(state, diceRoll, rollDepth);
+            if (stopScore + EPS >= rollScore) return StopAction.INSTANCE;
             Move bestMove = bestMoveForRoll(state, diceRoll, rollDepth);
+            return new RollAction(bestMove);
+        } else {
+            // No roll yet: decide STOP vs expected value of ROLL (chance node)
+            double stopScore = evalStop(state, stopDepth);
+            double rollScore = expectedValueRoll(state, rollDepth, true); // current player is maximizing here
+
+            if (stopScore + EPS >= rollScore) return StopAction.INSTANCE;
+
+            // We chose to roll; now actually roll and pick the move for that real outcome
+            DiceRoll realRoll = DiceRoll.roll(rng);
+            List<Move> legal = TurnManager.getLegalMoves(state, realRoll);
+            if (legal.isEmpty()) {
+                // instant bust if no move is possible, but action must still be "ROLL"
+                // You could return a special RollAction meaning "bust" or just pick a dummy move.
+                // Here we choose the conservative path: return StopAction would be illegal; so pick a dummy single if any.
+                return StopAction.INSTANCE; // If your engine requires an explicit "ROLL" action type, create it. Otherwise STOP is safest.
+            }
+            Move bestMove = bestMoveForRoll(state, realRoll, rollDepth);
             return new RollAction(bestMove);
         }
     }
@@ -67,16 +91,36 @@ public final class AIPlayer {
 
     // Evaluate STOP action from this state (deterministic)
     private double evalStop(GameState state, int depth) {
-        // Simulate STOP
         GameState next = state.copy();
         TurnManager.stop(next);
-        double val = expectiminimax(next, depth, true); // maximize from next player
 
-        // Victory bonus/penalty at this node
+        // If stopping immediately wins, just return a huge win and stop wasting time
         Player me = state.getCurrentPlayer();
-        if (TurnManager.checkWinCondition(next, me)) return 1_000_000 + val;
-        if (TurnManager.checkWinCondition(next, me.opponent())) return -1_000_000 + val;
-        return val;
+        if (TurnManager.checkWinCondition(next, me)) return 1_000_000.0;
+        if (TurnManager.checkWinCondition(next, me.opponent())) return -1_000_000.0; // practically impossible
+
+        // After STOP, it's opponent's turn → minimizing node
+        return expectiminimax(next, depth - 1, false);
+    }
+
+
+    public Action chooseActionWithTime(GameState state, DiceRoll diceRoll, long millis) {
+        long deadline = System.nanoTime() + millis * 1_000_000L;
+        this.searchDeadlineNanos = deadline;
+        Action best = null;
+        for (int d = 1; ; d++) {
+            ttEpoch++;
+            Action a = chooseAction(state, diceRoll, /*rollDepth=*/d, /*stopDepth=*/d + 1);
+            if (System.nanoTime() >= deadline) return best != null ? best : a;
+            best = a;
+        }
+    }
+
+
+    private boolean hasPendingChance(GameState s) {
+        // Your turn model: chance occurs when we choose ROLL, not as a separate phase in GameState.
+        // In expectiminimax we call expectedValueRoll only from decision nodes, so this can return false here.
+        return false;
     }
 
     // Evaluate ROLL + Move by branching over chance nodes and then maximizing over legal moves
@@ -134,6 +178,16 @@ public final class AIPlayer {
     // maximize=true => the player to move is a maximizing player.
     // In our usage after STOP or after applying a move (ROLL), the next player is minimizing.
     private double expectiminimax(GameState state, int depth, boolean maximize) {
+
+        long key = StateHasher.hash(state);
+        byte nodeType = hasPendingChance(state) ? NODE_CHANCE : (maximize ? NODE_MAX : NODE_MIN);
+
+        TTEntry hit = tt.get(key);
+        if (hit != null && hit.nodeType == nodeType && hit.depth >= depth) {
+            return hit.value;
+        }
+
+
         // Terminal check
         Player red = Player.RED;
         Player blue = Player.BLUE;
@@ -146,9 +200,8 @@ public final class AIPlayer {
         if (blueWin && !redWin) return (blue == current) ? 10_000.0 : -10_000.0;
         if (redWin && blueWin) return 0.0; // extremely rare
 
-        if (depth <= 0) {
-            // Heuristic evaluation from the perspective of the player to move
-            return heuristic(state, current);
+        if (depth <= 0 || TurnManager.checkWinCondition(state, Player.RED) || TurnManager.checkWinCondition(state, Player.BLUE)) {
+            return heuristicWithRisk(state);
         }
 
         // This is a choice node: STOP vs ROLL
@@ -162,54 +215,117 @@ public final class AIPlayer {
         }
 
         double rollScore = expectedValueRoll(state, depth, maximize);
-        return Math.max(stopScore, rollScore);
+        return maximize ? Math.max(stopScore, rollScore) : Math.min(stopScore, rollScore);
     }
 
-    private double expectedValueRoll(GameState state, int depth, boolean maximize) {
-        // Chance node: average over all 6^4 dice outcomes
-        // For performance, if depth is small we can still enumerate all 1296 outcomes.
-        double sum = 0.0;
-        int count = 0;
+    private double heuristicWithRisk(GameState s) {
+        double base = heuristic(s, s.getCurrentPlayer());
+        int mask = allowedSumsMask(s);
+        double bustProb = BustTable.P[mask];
+        return base - LAMBDA_BUST * bustProb;
+    }
 
-        // Enumerate all dice outcomes
-        // dice indexes: 0..3
-        for (int d0 = 1; d0 <= 6; d0++) {
-            for (int d1 = 1; d1 <= 6; d1++) {
-                for (int d2 = 1; d2 <= 6; d2++) {
-                    for (int d3 = 1; d3 <= 6; d3++) {
-                        DiceRoll roll =  DiceRoll.of(d0, d1, d2, d3);
-                        List<Move> legal = TurnManager.getLegalMoves(state, roll);
-                        if (legal.isEmpty()) {
-                            // Bust: switch player without committing temp runners
-                            GameState bust = state.copy();
-                            TurnManager.bust(bust);
-                            double v = expectiminimax(bust, depth - 1, !maximize);
-                            sum += v;
-                            count++;
-                            continue;
-                        }
-
-                        // For each legal move, take the best (max or min) and then average
-                        double best = (maximize ? Double.NEGATIVE_INFINITY : Double.POSITIVE_INFINITY);
-                        for (Move m : legal) {
-                            GameState child = state.copy();
-                            TurnManager.applyMove(child, m);
-                            double v = expectiminimax(child, depth - 1, !maximize);
-                            if (maximize) {
-                                if (v > best) best = v;
-                            } else {
-                                if (v < best) best = v;
-                            }
-                        }
-                        sum += best;
-                        count++;
-                    }
-                }
+    // Build allowed-sums bitmask from the current state's legality of singles
+    private int allowedSumsMask(GameState s) {
+        int mask = 0;
+        for (int sum = GameConstants.COL_MIN; sum <= GameConstants.COL_MAX; sum++) {
+            if (TurnManager.isSinglePlayable(s, sum)) {
+                mask |= (1 << (sum - 2));
             }
         }
-
-        return sum / Math.max(1, count);
+        return mask;
     }
+
+
+    private double expectedValueRoll(GameState state, int depth, boolean maximize) {
+        if (depth <= 0 || TurnManager.checkWinCondition(state, Player.RED) || TurnManager.checkWinCondition(state, Player.BLUE)) {
+            return heuristicWithRisk(state);
+        }
+
+        double weighted = 0.0;
+        int total = 0;
+
+        for (var e : RollBucketer.ENTRIES) {
+            // optional time guard every N buckets
+            if ((total & 63) == 0 && System.nanoTime() >= searchDeadlineNanos) {
+                return heuristicWithRisk(state);
+            }
+
+            int pa = e.bucket.a, pb = e.bucket.b, pc = e.bucket.c;
+            var legal = TurnManager.getLegalMovesFromPairings(state, pa, pb, pc);
+
+            double childValue;
+            if (legal.isEmpty()) {
+                GameState bust = state.copy();
+                TurnManager.bust(bust);
+                childValue = expectiminimax(bust, depth - 1, !maximize);
+            } else {
+                double best = maximize ? Double.NEGATIVE_INFINITY : Double.POSITIVE_INFINITY;
+                for (Move m : orderMoves(state, maybeKiller(state), legal)) {
+                    GameState child = state.copy();
+                    TurnManager.applyMove(child, m);
+                    double v = expectiminimax(child, depth - 1, !maximize);
+                    if (maximize) {
+                        if (v > best) best = v;
+                    } else {
+                        if (v < best) best = v;
+                    }
+                }
+                childValue = best;
+            }
+            weighted += childValue * e.frequency;
+            total += e.frequency;
+        }
+
+        // store chance node value in TT
+        long key = StateHasher.hash(state);
+        tt.put(key, new TTEntry(weighted / total, depth, NODE_CHANCE, (byte) 0, ttEpoch));
+        return weighted / total;
+    }
+
+    private Move maybeKiller(GameState s) {
+        return killer.get(StateHasher.hash(s));
+    }
+
+    private void rememberBest(GameState s, Move best) {
+        if (best != null) killer.put(StateHasher.hash(s), best);
+    }
+
+    private List<Move> orderMoves(GameState state, Move killerMove, List<Move> moves) {
+        moves.sort((m1, m2) -> Double.compare(scoreMove(state, m2), scoreMove(state, m1)));
+        if (killerMove != null) {
+            int i = moves.indexOf(killerMove);
+            if (i > 0) {
+                Move k = moves.remove(i);
+                moves.add(0, k);
+            }
+        }
+        return moves;
+    }
+
+    private double scoreMove(GameState s, Move m) {
+        // Fast-and-dirty lookahead-free score
+        int meLocksBefore = countLocks(s, s.getCurrentPlayer());
+        int meNearBefore = nearWinCount(s, s.getCurrentPlayer());
+
+        GameState tmp = s.copy();
+        TurnManager.applyMove(tmp, m);
+
+        int meLocksAfter = countLocks(tmp, s.getCurrentPlayer());
+        int meNearAfter = nearWinCount(tmp, s.getCurrentPlayer());
+
+        int completesThird = (meLocksAfter >= GameConstants.TO_WIN) ? 1 : 0;
+        int deltaLocks = meLocksAfter - meLocksBefore;
+        int deltaNear = meNearAfter - meNearBefore;
+
+        // discourage spawning unnecessary new runners if you already have many active
+        int activeBefore = s.countActiveColumns();
+        int activeAfter = tmp.countActiveColumns();
+        int extraRunners = Math.max(0, activeAfter - activeBefore);
+
+        return 1000 * completesThird + 200 * deltaLocks + 80 * deltaNear - 5 * extraRunners;
+    }
+
 
     // ---------------------------
     // Heuristic

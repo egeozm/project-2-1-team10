@@ -78,7 +78,7 @@ public final class TurnManager {
     }
 
     // Single-sum feasibility: can we advance 'sum' by 1 step right now?
-    private static boolean canUseSingle(GameState s, int sum) {
+    static boolean canUseSingle(GameState s, int sum) {
         int col = GameConstants.sumToColumnID(sum);
         if (s.isColumnLocked(col)) return false;
 
@@ -200,4 +200,36 @@ public final class TurnManager {
 
         return active + newRunners <= GameConstants.MAX_TEMP_RUNNERS;
     }
+
+    public static List<Move> getLegalMovesFromPairings(GameState s, int packedA, int packedB, int packedC) {
+        int[][] pairs = {
+            {RollBucketer.unpackU(packedA), RollBucketer.unpackV(packedA)},
+            {RollBucketer.unpackU(packedB), RollBucketer.unpackV(packedB)},
+            {RollBucketer.unpackU(packedC), RollBucketer.unpackV(packedC)}
+        };
+        List<Move> moves = new ArrayList<>(3);
+
+        for (int i = 0; i < 3; i++) {
+            int a = pairs[i][0], b = pairs[i][1];
+
+            boolean aOK = canUseSingle(s, a);
+            boolean bOK = canUseSingle(s, b);
+            boolean bothOK = aOK && bOK && canUseBoth(s, a, b);
+
+            if (bothOK) {
+                moves.add(new Move(i, a, b));
+                // per your rule: if BOTH is possible, you must offer only BOTH for this pairing (not singles)
+            } else {
+                if (aOK) moves.add(new Move(i, a, 0));
+                if (bOK && b != a) moves.add(new Move(i, 0, b));
+            }
+        }
+        return moves;
+    }
+
+    // Add this near the other public helpers in TurnManager:
+    public static boolean isSinglePlayable(GameState s, int sum) {
+        return canUseSingle(s, sum);
+    }
+
 }
