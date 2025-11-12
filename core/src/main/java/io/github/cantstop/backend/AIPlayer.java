@@ -121,7 +121,7 @@ public final class AIPlayer {
         }
 
         // Fallback (should not happen if legal moves exist)
-        if (best == bestScore) {
+        if (best == null) {
             best = legal.get(0);
         }
         return best;
@@ -177,7 +177,7 @@ public final class AIPlayer {
             for (int d1 = 1; d1 <= 6; d1++) {
                 for (int d2 = 1; d2 <= 6; d2++) {
                     for (int d3 = 1; d3 <= 6; d3++) {
-                        DiceRoll roll = new DiceRoll(d0, d1, d2, d3);
+                        DiceRoll roll =  DiceRoll.of(d0, d1, d2, d3);
                         List<Move> legal = TurnManager.getLegalMoves(state, roll);
                         if (legal.isEmpty()) {
                             // Bust: switch player without committing temp runners

@@ -27,7 +27,9 @@ public final class DiceRoll {
             1 + rng.nextInt(6)
         );
     }
-
+    public static DiceRoll of(int d0, int d1, int d2, int d3) {
+        return new DiceRoll(d0, d1, d2, d3);
+    }
     // returns a copy of the raw dice values
     public int[] dice() {
         return dice.clone();
