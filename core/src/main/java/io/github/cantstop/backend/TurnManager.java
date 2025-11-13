@@ -85,7 +85,9 @@ public final class TurnManager {
         if (s.isColumnLocked(col)) return false;
 
         // Advancing an already active temp runner is always fine.
-        if (s.isColumnActive(col)) return true;
+        if (s.isColumnActive(col)) {
+            return s.tempAtCol(col) != GameConstants.maxHeight(sum);
+        }
 
         // Otherwise we'd open a new temp runner. Check capacity.
         int active = s.countActiveColumns();
