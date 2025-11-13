@@ -5,6 +5,7 @@ import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
@@ -472,11 +473,33 @@ public class PlayScreen implements Screen {
             }
         }
 
+        // draw column numbers
         font.setColor(Color.WHITE);
+        font.getData().setScale(1f);
+        GlyphLayout layout = new GlyphLayout();
         for (int col = 0; col < GameConstants.NUM_COLS; col++) {
             int sum = GameConstants.columnToSum(col);
-            font.draw(game.batch, String.valueOf(sum),
-                colX(col) + CELL_W / 2 - 5, ORIGIN_Y - 10);
+            String text = String.valueOf(sum);
+            layout.setText(font, text);
+
+            float x = colX(col) + CELL_W / 2 - layout.width / 2 - 4;
+            float y = ORIGIN_Y - 10;
+
+            font.draw(game.batch, layout, x, y);
+        }
+
+        // show whose turn it is
+        font.setColor(Color.WHITE);
+        font.getData().setScale(1f);
+        font.draw(game.batch, "Current Player:", 20, 280);
+
+        font.getData().setScale(3f);
+        if (gameState.getCurrentPlayer() == Player.RED) {
+            font.setColor(160f/255f, 19f/255f, 19f/255f, 1);
+            font.draw(game.batch, "RED", 20, 260);
+        } else {
+            font.setColor(95f/255f, 205f/255f, 228f/255f, 1);
+            font.draw(game.batch, "BLUE", 20, 260);
         }
 
         // drawing the dice on the right side
