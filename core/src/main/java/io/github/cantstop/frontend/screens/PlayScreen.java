@@ -16,6 +16,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.Timer;
+import com.badlogic.gdx.utils.viewport.ScreenViewport;
 
 import io.github.cantstop.frontend.GameAssets;
 import io.github.cantstop.frontend.Main;
@@ -70,32 +71,11 @@ public class PlayScreen implements Screen {
     public PlayScreen(Main game) {
         this.game = game;
 
-        stage = new Stage();
         skin = SharedSkin.getSkin();
         font = new BitmapFont();
         font.getData().setScale(0.8f);
         shapeRenderer = new ShapeRenderer();
-        Gdx.input.setInputProcessor(stage);
 
-        Table statusTable = new Table();
-        statusTable.setFillParent(true);
-        statusTable.bottom().left();
-        statusTable.pad(5);
-
-        statusLabel = new Label("", skin);
-        statusLabel.setFontScale(0.7f);
-        statusTable.add(statusLabel);
-        stage.addActor(statusTable);
-
-        Table buttonTable = new Table();
-        buttonTable.setFillParent(true);
-        buttonTable.bottom().right();
-        buttonTable.pad(5);
-
-        Table menuTable = new Table();
-        menuTable.setFillParent(true);
-        menuTable.top().left();
-        menuTable.pad(5);
 
         rollButton = new TextButton("Roll", skin);
         rollButton.addListener(new ClickListener() {
@@ -126,17 +106,17 @@ public class PlayScreen implements Screen {
             }
         });
 
-        buttonTable.add(rollButton).size(120, 50).pad(8);
-        buttonTable.add(stopButton).size(120, 50).pad(8);
-        menuTable.add(menuButton).size(120, 50).pad(8);
-        stage.addActor(buttonTable);
-        stage.addActor(menuTable);
+
+
     }
 
     @Override
     public void show() {
         assets = new GameAssets();
         assets.loadAll();
+
+        stage = new Stage(game.viewport);
+        Gdx.input.setInputProcessor(stage);
 
         board = assets.board;
         diceFaces = assets.diceTextures;
@@ -148,6 +128,34 @@ public class PlayScreen implements Screen {
         blueMarker1 = assets.blueMarker1;
         blueMarker2 = assets.blueMarker2;
         blueCross = assets.blueCross;
+
+        Table statusTable = new Table();
+        statusTable.setFillParent(true);
+        statusTable.bottom().left();
+        statusTable.pad(5);
+
+        statusLabel = new Label("", skin);
+        statusLabel.setFontScale(0.7f);
+        statusTable.add(statusLabel);
+
+        Table buttonTable = new Table();
+        buttonTable.setFillParent(true);
+        buttonTable.bottom().right();
+        buttonTable.pad(5);
+
+        Table menuTable = new Table();
+        menuTable.setFillParent(true);
+        menuTable.top().left();
+        menuTable.pad(5);
+
+        buttonTable.add(rollButton).size(100, 50).pad(8);
+        buttonTable.add(stopButton).size(100, 50).pad(8);
+        menuTable.add(menuButton).size(100, 50).pad(8);
+
+        stage.addActor(statusTable);
+        stage.addActor(buttonTable);
+        stage.addActor(menuTable);
+
 
         gameState = GameState.initialize(Player.RED);
         updateStatusLabels();
@@ -249,15 +257,15 @@ public class PlayScreen implements Screen {
 
         int[][] pairings = currentRoll.pairings();
 
-        float startX = 525;
-        float startY = 300;
-        float spacing = 80;
+        float startX = stage.getViewport().getWorldWidth() * 0.78f;
+        float startY = stage.getViewport().getWorldHeight() * 0.80f;
+        float spacing = 60;
 
         //intialize it ig
         if (combinationsLabel == null) {
             combinationsLabel = new Label("", skin);
             combinationsLabel.setFontScale(1f);
-            combinationsLabel.setPosition(startX - 120, startY + 100);
+            combinationsLabel.setPosition(startX - 200, startY + 30);
             stage.addActor(combinationsLabel);
         }
 
@@ -269,7 +277,7 @@ public class PlayScreen implements Screen {
                 TextButton moveBtn = new TextButton(btnText, skin);
 
 
-                moveBtn.setSize(120, 50);
+                moveBtn.setSize(100, 50);
                 moveBtn.setPosition(startX, startY - i * spacing);
 
                 final Move selectedMove = move;
@@ -294,7 +302,7 @@ public class PlayScreen implements Screen {
                 String btnText = formatMoveLabel(move);
                 TextButton moveBtn = new TextButton(btnText, skin);
 
-                moveBtn.setSize(120, 50);
+                moveBtn.setSize(100, 50);
                 moveBtn.setPosition(startX, startY - i * spacing);
                 moveBtn.setDisabled(true);
                 moveBtn.getLabel().setAlignment(com.badlogic.gdx.utils.Align.center);
