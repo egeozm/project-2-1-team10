@@ -1,5 +1,7 @@
 package io.github.cantstop.backend;
 
+import io.github.cantstop.backend.AI.RollBucketer;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;

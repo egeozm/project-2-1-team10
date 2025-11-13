@@ -1,7 +1,8 @@
 package io.github.cantstop.backend;
 
+import io.github.cantstop.backend.AI.AIPlayer;
+
 import java.util.Random;
-import java.util.function.Supplier;
 
 /**
  * Simple simulator to pit two AIPlayers against each other.

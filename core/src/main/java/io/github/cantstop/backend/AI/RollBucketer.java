@@ -1,8 +1,8 @@
-package io.github.cantstop.backend;
+package io.github.cantstop.backend.AI;
 
 import java.util.*;
 
-final class RollBucketer {
+public final class RollBucketer {
 
     static final class Bucket {
         // 3 pairings; each pairing encodes the ordered pair (u<=v) as u*16+v (both in 2..12)
@@ -60,11 +60,11 @@ final class RollBucketer {
         return (u << 4) | v;
     }          // u,v in [2..12]
 
-    static int unpackU(int p) {
+    public static int unpackU(int p) {
         return (p >> 4) & 0xF;
     }
 
-    static int unpackV(int p) {
+    public static int unpackV(int p) {
         return p & 0xF;
     }
 }

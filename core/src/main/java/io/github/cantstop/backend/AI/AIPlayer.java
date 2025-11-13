@@ -1,4 +1,6 @@
-package io.github.cantstop.backend;
+package io.github.cantstop.backend.AI;
+
+import io.github.cantstop.backend.*;
 
 import java.util.*;
 

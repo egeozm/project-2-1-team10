@@ -1,4 +1,4 @@
-package io.github.cantstop.backend;
+package io.github.cantstop.backend.AI;
 
 final class TTEntry {
     final double value;

@@ -1,4 +1,8 @@
-package io.github.cantstop.backend;
+package io.github.cantstop.backend.AI;
+
+import io.github.cantstop.backend.GameConstants;
+import io.github.cantstop.backend.GameState;
+import io.github.cantstop.backend.Player;
 
 import java.util.Random;
 
