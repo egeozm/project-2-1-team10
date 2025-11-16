@@ -300,4 +300,71 @@ public final class MCTSPlayer {
             this.lastRoll = lastRoll;
         }
     }
+
+
+
+    /**
+     * Decyzja w korzeniu, gdy faza to CHOOSE_MOVE – wymagany lastRoll z poprzedniego ROLL.
+     * Zwraca MctsAction.MOVE(mv).
+     */
+    public MctsAction decide(GameState rootState, DiceRoll lastRoll) {
+        if (rootState.getTurnPhase() != TurnPhase.CHOOSE_MOVE) {
+            throw new IllegalStateException("decide(state,lastRoll) only for CHOOSE_MOVE phase");
+        }
+        final Player rootPlayer = rootState.getCurrentPlayer();
+
+        // Root ma od razu listę MOVE pod dane lastRoll
+        final List<MctsAction> rootActions = legalActionsFrom(rootState, lastRoll);
+        final Node root = new Node(null, rootPlayer, rootActions);
+
+        for (int it = 0; it < maxIterations; it++) {
+            GameState s = rootState.copy();
+            Node node = root;
+            DiceRoll lr = lastRoll; // ważne: root CHOOSE_MOVE startuje z już znanym rzutem
+
+            // SELECTION
+            while (!node.hasUntried() && !isTerminal(s)) {
+                node = selectUCT(node);
+                StepResult step = applyActionInPlace(s, node.actionFromParent);
+                lr = step.lastRoll; // aktualizuj po ROLL+noBust
+                if (step.terminal) break;
+            }
+
+            // EXPANSION
+            if (!isTerminal(s) && node.hasUntried()) {
+                sortUntriedForExpansion(node.untried, s, lr, rootPlayer);
+                MctsAction a = node.popUntried();
+                StepResult step = applyActionInPlace(s, a);
+                Node child = node.addChild(a, s.getCurrentPlayer(), legalActionsFrom(s, step.lastRoll));
+                child.actionFromParent = a;
+
+                if (step.terminal) {
+                    double reward = winnerIs(s, rootPlayer) ? 1.0 : 0.0;
+                    backpropagate(child, reward);
+                    continue;
+                }
+                node = child;
+                lr = step.lastRoll;
+            }
+
+            // SIMULATION / terminal
+            double reward;
+            if (!isTerminal(s)) {
+                reward = rolloutFrom(s, rootPlayer);
+            } else {
+                reward = winnerIs(s, rootPlayer) ? 1.0 : 0.0;
+            }
+            backpropagate(node, reward);
+        }
+
+        // W CHOOSE_MOVE oczekujemy MOVE
+        MctsAction best = bestActionAtRoot(root);
+        if (best == null || !best.isMove()) {
+            // fallback: jeśli cokolwiek poszło nie tak, wybierz pierwszy legalny MOVE
+            List<MctsAction> acts = legalActionsFrom(rootState, lastRoll);
+            return acts.isEmpty() ? null : acts.get(0);
+        }
+        return best;
+    }
+
 }
