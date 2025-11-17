@@ -12,8 +12,7 @@ public final class GameAssets implements Disposable {
     public Texture board;
     public Texture blueMarker1, blueMarker2, blueCross;
     public Texture redMarker1,  redMarker2,  redCross;
-    public static Texture[] diceTextures; // indices 0..5 for faces 1..6
-
+    public Texture[] diceTextures; // indices 0..5 for faces 1..6
 
     /** Queue and load everything we need for PlayScreen in one go. */
     public void loadAll() {

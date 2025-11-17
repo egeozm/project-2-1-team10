@@ -12,7 +12,7 @@ public class SimulationDemo {
             System.out.println("--- " + state.getCurrentPlayer() + " to move --");
 
             DiceRoll roll = DiceRoll.roll(rng);
-            int[] dice = roll.dice();
+            int[] dice = roll.toArray();
             System.out.printf("Rolled: %d %d %d %d%n", dice[0], dice[1], dice[2], dice[3]);
 
             List<Move> moves = TurnManager.getLegalMoves(state, roll);
