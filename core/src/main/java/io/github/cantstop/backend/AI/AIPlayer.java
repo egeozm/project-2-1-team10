@@ -20,8 +20,8 @@ public final class AIPlayer {
     private static final double EPS = 1e-9;
 
     // Depth defaults; you can tune these
-    public static final int DEFAULT_DEPTH_ROLL_PHASE = 4; // expectiminimax depth for ROLL (chance) nodes
-    public static final int DEFAULT_DEPTH_AFTER_STOP = 5; // deterministic depth after STOP
+    public static final int DEFAULT_DEPTH_ROLL_PHASE = 3; // expectiminimax depth for ROLL (chance) nodes
+    public static final int DEFAULT_DEPTH_AFTER_STOP = 4; // deterministic depth after STOP
 
     private final Random rng;
 
@@ -96,13 +96,11 @@ public final class AIPlayer {
         GameState next = state.copy();
         TurnManager.stop(next);
 
-        // If stopping immediately wins, just return a huge win and stop wasting time
         Player me = state.getCurrentPlayer();
         if (TurnManager.checkWinCondition(next, me)) return 1_000_000.0;
-        if (TurnManager.checkWinCondition(next, me.opponent())) return -1_000_000.0; // practically impossible
+        if (TurnManager.checkWinCondition(next, me.opponent())) return -1_000_000.0;
 
-        // After STOP, it's opponent's turn → minimizing node
-        return expectiminimax(next, depth - 1, false);
+        return expectiminimax(next, depth - 1, /*maximize=*/false);
     }
 
 
@@ -129,10 +127,9 @@ public final class AIPlayer {
     private double evalRoll(GameState state, DiceRoll actualRoll, int depth) {
         List<Move> legal = TurnManager.getLegalMoves(state, actualRoll);
         if (legal.isEmpty()) {
-            // Bust: switch player without committing
             GameState bust = state.copy();
             TurnManager.bust(bust);
-            double val = expectiminimax(bust, depth - 1, false); // minimize from opponent
+            double val = expectiminimax(bust, depth - 1, /*maximize=*/false);
             Player me = state.getCurrentPlayer();
             if (TurnManager.checkWinCondition(bust, me)) return 1_000_000 + val;
             if (TurnManager.checkWinCondition(bust, me.opponent())) return -1_000_000 + val;
@@ -143,12 +140,12 @@ public final class AIPlayer {
         for (Move m : legal) {
             GameState child = state.copy();
             TurnManager.applyMove(child, m);
-            // No win check here because you don't win by making a normal move
-            double v = expectiminimax(child, depth - 1, false); // opponent will minimize after we roll next
+            double v = expectiminimax(child, depth - 1, /*maximize=*/false);
             if (v > best) best = v;
         }
         return best;
     }
+
 
     // Pick the best move for the given roll using one-ply lookahead with chance expectation over rollDepth
     private Move bestMoveForRoll(GameState state, DiceRoll roll, int depth) {
@@ -159,19 +156,19 @@ public final class AIPlayer {
         for (Move m : legal) {
             GameState child = state.copy();
             TurnManager.applyMove(child, m);
-            double v = expectiminimax(child, depth - 1, false); // minimize next
+            double v = expectiminimax(child, depth - 1, /*maximize=*/false);
             if (v > bestScore - EPS) {
                 bestScore = v;
                 best = m;
             }
         }
 
-        // Fallback (should not happen if legal moves exist)
         if (best == null) {
             best = legal.get(0);
         }
         return best;
     }
+
 
     // ---------------------------
     // Expectiminimax with heuristic evaluation
@@ -180,6 +177,17 @@ public final class AIPlayer {
     // maximize=true => the player to move is a maximizing player.
     // In our usage after STOP or after applying a move (ROLL), the next player is minimizing.
     private double expectiminimax(GameState state, int depth, boolean maximize) {
+        return expectiminimax(state, depth, maximize,
+            Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY);
+
+    }
+
+    // Core expectiminimax with alpha-beta pruning on decision nodes
+    private double expectiminimax(GameState state,
+                                  int depth,
+                                  boolean maximize,
+                                  double alpha,
+                                  double beta) {
 
         long key = StateHasher.hash(state);
         byte nodeType = hasPendingChance(state) ? NODE_CHANCE : (maximize ? NODE_MAX : NODE_MIN);
@@ -189,35 +197,73 @@ public final class AIPlayer {
             return hit.value;
         }
 
-
         // Terminal check
         Player red = Player.RED;
         Player blue = Player.BLUE;
         boolean redWin = TurnManager.checkWinCondition(state, red);
         boolean blueWin = TurnManager.checkWinCondition(state, blue);
 
-        // If both could be true (rare edge), prefer current player.
         Player current = state.getCurrentPlayer();
         if (redWin && !blueWin) return (red == current) ? 10_000.0 : -10_000.0;
         if (blueWin && !redWin) return (blue == current) ? 10_000.0 : -10_000.0;
-        if (redWin && blueWin) return 0.0; // extremely rare
+        if (redWin && blueWin) return 0.0;
 
-        if (depth <= 0 || TurnManager.checkWinCondition(state, Player.RED) || TurnManager.checkWinCondition(state, Player.BLUE)) {
+        if (depth <= 0) {
             return heuristicWithRisk(state);
         }
 
-        // This is a choice node: STOP vs ROLL
-        // - STOP commits and switches player -> deterministic
-        // - ROLL is a chance node over all dice outcomes
-        double stopScore;
-        {
-            GameState next = state.copy();
-            TurnManager.stop(next);
-            stopScore = expectiminimax(next, depth - 1, !maximize);
+        double result;
+
+        if (maximize) {
+            // MAX node: choose between STOP and ROLL, prune with alpha-beta
+            double best = Double.NEGATIVE_INFINITY;
+
+            // 1) STOP branch
+            {
+                GameState next = state.copy();
+                TurnManager.stop(next);
+                double stopScore = expectiminimax(next, depth - 1, /*maximize=*/false, alpha, beta);
+                best = Math.max(best, stopScore);
+                alpha = Math.max(alpha, best);
+                if (alpha >= beta) {
+                    result = best;
+                    tt.put(key, new TTEntry(result, depth, nodeType, (byte) 0, ttEpoch));
+                    return result;
+                }
+            }
+
+            // 2) ROLL branch (chance over dice)
+            double rollScore = expectedValueRoll(state, depth, /*maximize=*/true, alpha, beta);
+            best = Math.max(best, rollScore);
+
+            result = best;
+        } else {
+            // MIN node
+            double best = Double.POSITIVE_INFINITY;
+
+            // 1) STOP branch
+            {
+                GameState next = state.copy();
+                TurnManager.stop(next);
+                double stopScore = expectiminimax(next, depth - 1, /*maximize=*/true, alpha, beta);
+                best = Math.min(best, stopScore);
+                beta = Math.min(beta, best);
+                if (alpha >= beta) {
+                    result = best;
+                    tt.put(key, new TTEntry(result, depth, nodeType, (byte) 0, ttEpoch));
+                    return result;
+                }
+            }
+
+            // 2) ROLL branch
+            double rollScore = expectedValueRoll(state, depth, /*maximize=*/false, alpha, beta);
+            best = Math.min(best, rollScore);
+
+            result = best;
         }
 
-        double rollScore = expectedValueRoll(state, depth, maximize);
-        return maximize ? Math.max(stopScore, rollScore) : Math.min(stopScore, rollScore);
+        tt.put(key, new TTEntry(result, depth, nodeType, (byte) 0, ttEpoch));
+        return result;
     }
 
     private double heuristicWithRisk(GameState s) {
@@ -240,7 +286,17 @@ public final class AIPlayer {
 
 
     private double expectedValueRoll(GameState state, int depth, boolean maximize) {
-        if (depth <= 0 || TurnManager.checkWinCondition(state, Player.RED) || TurnManager.checkWinCondition(state, Player.BLUE)) {
+        return expectedValueRoll(state, depth, maximize,
+            Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY);
+    }
+
+    private double expectedValueRoll(GameState state,
+                                     int depth,
+                                     boolean maximize,
+                                     double alpha,
+                                     double beta) {
+        if (depth <= 0 || TurnManager.checkWinCondition(state, Player.RED)
+            || TurnManager.checkWinCondition(state, Player.BLUE)) {
             return heuristicWithRisk(state);
         }
 
@@ -248,7 +304,7 @@ public final class AIPlayer {
         int total = 0;
 
         for (var e : RollBucketer.ENTRIES) {
-            // optional time guard every N buckets
+            // Time guard
             if ((total & 63) == 0 && System.nanoTime() >= searchDeadlineNanos) {
                 return heuristicWithRisk(state);
             }
@@ -260,13 +316,15 @@ public final class AIPlayer {
             if (legal.isEmpty()) {
                 GameState bust = state.copy();
                 TurnManager.bust(bust);
-                childValue = expectiminimax(bust, depth - 1, !maximize);
+                childValue = expectiminimax(bust, depth - 1, !maximize, alpha, beta);
             } else {
                 double best = maximize ? Double.NEGATIVE_INFINITY : Double.POSITIVE_INFINITY;
+
                 for (Move m : orderMoves(state, maybeKiller(state), legal)) {
                     GameState child = state.copy();
                     TurnManager.applyMove(child, m);
-                    double v = expectiminimax(child, depth - 1, !maximize);
+                    double v = expectiminimax(child, depth - 1, !maximize, alpha, beta);
+
                     if (maximize) {
                         if (v > best) best = v;
                     } else {
@@ -275,15 +333,18 @@ public final class AIPlayer {
                 }
                 childValue = best;
             }
+
             weighted += childValue * e.frequency;
             total += e.frequency;
         }
 
-        // store chance node value in TT
+        double value = weighted / total;
+
         long key = StateHasher.hash(state);
-        tt.put(key, new TTEntry(weighted / total, depth, NODE_CHANCE, (byte) 0, ttEpoch));
-        return weighted / total;
+        tt.put(key, new TTEntry(value, depth, NODE_CHANCE, (byte) 0, ttEpoch));
+        return value;
     }
+
 
     private Move maybeKiller(GameState s) {
         return killer.get(StateHasher.hash(s));

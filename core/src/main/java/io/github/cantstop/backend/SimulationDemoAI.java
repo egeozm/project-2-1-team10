@@ -8,7 +8,7 @@ import java.util.Random;
  * Simple simulator to pit two AIPlayers against each other.
  * <p>
  * Usage (all args optional):
- * java io.github.cantstop.backend.SimulationDemoAI [games] [rollDepth] [stopDepth] [seed] [verbose]
+ * java io.github.cantstop.backend.SimulationDemoAI [games] [rollDepth] [stopDepth] [seed] [verbose] [perMoveMillis]
  * <p>
  * Examples:
  * # 20 games, default depths, random seed, quiet
@@ -25,6 +25,7 @@ public final class SimulationDemoAI {
         int stopDepth = argOr(args, 2, AIPlayer.DEFAULT_DEPTH_AFTER_STOP);
         long seed = argOr(args, 3, System.nanoTime());
         boolean verbose = boolOr(args, 4, false);
+        int perMoveMillis = argOr(args, 5, 100); // default 100ms per decision
 
         Random matchRng = new Random(seed);
 
@@ -37,7 +38,7 @@ public final class SimulationDemoAI {
             AIPlayer blueAI = new AIPlayer(new Random(seed ^ (g * 0xC2B2AE3D27D4EB4FL)));
 
             GameState state = GameState.initialize(Player.RED);
-            int movesThisGame = playSingleGame(state, redAI, blueAI, rollDepth, stopDepth, verbose);
+            int movesThisGame = playSingleGame(state, redAI, blueAI, rollDepth, stopDepth, verbose, perMoveMillis);
 
             Player winner = TurnManager.checkWinCondition(state, Player.RED) ? Player.RED : Player.BLUE;
             if (winner == Player.RED) redWins++;
@@ -64,7 +65,7 @@ public final class SimulationDemoAI {
      * @return number of applied actions (moves + stops) in this game
      */
 
-    private static int playSingleGame(GameState state, AIPlayer redAI, AIPlayer blueAI, int rollDepth, int stopDepth, boolean verbose) {
+    private static int playSingleGame(GameState state, AIPlayer redAI, AIPlayer blueAI, int rollDepth, int stopDepth, boolean verbose, int perMoveMillis) {
 
         int actions = 0;
 
@@ -85,7 +86,7 @@ public final class SimulationDemoAI {
             while (!turnOver && !TurnManager.checkWinCondition(state, Player.RED) && !TurnManager.checkWinCondition(state, Player.BLUE)) {
 
                 // Ask AI what to do at this decision (no dice yet)
-                AIPlayer.Action action = ai.chooseAction(state, /*diceRoll=*/null, rollDepth, stopDepth);
+                AIPlayer.Action action = ai.chooseActionWithTime(state, /*diceRoll=*/null, perMoveMillis);
                 actions++;
 
                 if (action instanceof AIPlayer.StopAction) {
