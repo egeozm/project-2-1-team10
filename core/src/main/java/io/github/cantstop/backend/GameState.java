@@ -18,6 +18,8 @@ public final class GameState {
     private final int[] blueMarkers = new int[GameConstants.NUM_COLS];
     private final int[] tempRunners = new int[GameConstants.NUM_COLS];
 
+    private DiceRoll lastRoll;
+
     // ------------------------------------------------------------------------
     //  Initialization
     // ------------------------------------------------------------------------
@@ -45,6 +47,9 @@ public final class GameState {
     public int getMarkerHeight(Player p, int col) {
         return (p == Player.RED) ? redMarkers[col] : blueMarkers[col];
     }
+
+    public DiceRoll getLastRoll() { return lastRoll; }
+    public void setLastRoll(DiceRoll diceRoll) { this.lastRoll = diceRoll; }
 
     // ------------------------------------------------------------------------
     //  Complex getters

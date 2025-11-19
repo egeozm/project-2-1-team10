@@ -16,6 +16,7 @@ public class Main extends Game {
     public FitViewport viewport;
     public SpriteBatch batch;
     public BitmapFont font;
+    public GameAssets assets;
     public Music mainMenuMusic;
 
     @Override
@@ -29,6 +30,9 @@ public class Main extends Game {
         //font has 15pt, but we need to scale it to our viewport by ratio of viewport height to screen height
         font.setUseIntegerPositions(false);
         font.getData().setScale(viewport.getWorldHeight() / Gdx.graphics.getHeight());
+
+        this.assets = new GameAssets();
+        assets.loadAll();
 
         //music
         mainMenuMusic = Gdx.audio.newMusic(Gdx.files.internal("music/mainMenuMusic.mp3"));

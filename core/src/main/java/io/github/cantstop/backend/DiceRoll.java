@@ -31,7 +31,7 @@ public final class DiceRoll {
         return new DiceRoll(d0, d1, d2, d3);
     }
     // returns a copy of the raw dice values
-    public int[] dice() {
+    public int[] toArray() {
         return dice.clone();
     }
 
