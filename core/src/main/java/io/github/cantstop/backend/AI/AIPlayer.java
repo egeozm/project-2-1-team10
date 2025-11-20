@@ -7,7 +7,9 @@ import java.util.*;
 /**
  * AI for Can't Stop using expectiminimax with heuristic evaluation.
  * - If a dice roll is provided, it evaluates STOP vs ROLL+Move.
- * - ROLL branch is a chance node over all 1296 possible dice outcomes (weighted equally).
+ * - ROLL branch is a chance node over all 6^4 = 1296 ordered dice outcomes,
+ * but we iterate over symmetry-buckets (RollBucketer.ENTRIES), each weighted
+ * by how many of the 1296 rolls map to that bucket.
  * - If no dice roll is provided, it simulates a ROLL (using the provided RNG) and then evaluates ROLL+Move.
  * <p>
  * The AI returns either:
