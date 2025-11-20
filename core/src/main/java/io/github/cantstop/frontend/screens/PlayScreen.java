@@ -27,6 +27,7 @@ public class PlayScreen implements Screen {
     private DiceRenderer diceRenderer;
     private PopupRenderer popupRenderer;
     private MoveButtonRenderer moveButtonRenderer;
+    private boolean vsAI;
 
     // UI
     private Stage stage;
@@ -39,8 +40,9 @@ public class PlayScreen implements Screen {
 
     private boolean gameOver = false;
 
-    public PlayScreen(Main game) {
+    public PlayScreen(Main game , boolean vsAI) {
         this.game = game;
+        this.vsAI = vsAI;
         gameState = GameState.initialize(Player.RED);
 
         font = new BitmapFont();

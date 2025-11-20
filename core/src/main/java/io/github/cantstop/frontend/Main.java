@@ -42,11 +42,15 @@ public class Main extends Game {
         setScreen(new MenuScreen(this));
     }
 
-    public void startGame() {
+    public void startGame(boolean vsAI) {
         if(mainMenuMusic.isPlaying()){
             mainMenuMusic.stop();
         }
-        setScreen(new PlayScreen(this));
+        setScreen(new PlayScreen(this, vsAI));
+    }
+
+    public void startGame() {
+        startGame(false);
     }
 
     @Override
