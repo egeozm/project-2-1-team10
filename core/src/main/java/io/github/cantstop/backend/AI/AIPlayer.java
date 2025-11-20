@@ -62,32 +62,40 @@ public final class AIPlayer {
      */
     public Action chooseAction(GameState state, DiceRoll diceRoll, int rollDepth, int stopDepth) {
         if (diceRoll != null) {
-            // We already know the roll: compare STOP vs ROLL+best move for THIS roll
-            double stopScore = evalStop(state, stopDepth);
-            double rollScore = evalRoll(state, diceRoll, rollDepth);
-            if (stopScore + EPS >= rollScore) return StopAction.INSTANCE;
+            // We already rolled: according to rules, we MUST play this roll (or bust),
+            // we are NOT allowed to choose STOP here.
+
+            List<Move> legal = TurnManager.getLegalMoves(state, diceRoll);
+            if (legal.isEmpty()) {
+                // No legal move → bust. The engine should handle bust when it sees there
+                // are no moves for this roll; we just signal "end of turn".
+                return StopAction.INSTANCE;
+            }
+
             Move bestMove = bestMoveForRoll(state, diceRoll, rollDepth);
             return new RollAction(bestMove);
         } else {
-            // No roll yet: decide STOP vs expected value of ROLL (chance node)
+            // No roll yet: decide between STOP and the expected value of ROLL.
             double stopScore = evalStop(state, stopDepth);
-            double rollScore = expectedValueRoll(state, rollDepth, true); // current player is maximizing here
+            double rollScore = expectedValueRoll(state, rollDepth, true); // current player is maximizing
 
-            if (stopScore + EPS >= rollScore) return StopAction.INSTANCE;
+            if (stopScore + EPS >= rollScore) {
+                return StopAction.INSTANCE;
+            }
 
             // We chose to roll; now actually roll and pick the move for that real outcome
             DiceRoll realRoll = DiceRoll.roll(rng);
             List<Move> legal = TurnManager.getLegalMoves(state, realRoll);
             if (legal.isEmpty()) {
-                // instant bust if no move is possible, but action must still be "ROLL"
-                // You could return a special RollAction meaning "bust" or just pick a dummy move.
-                // Here we choose the conservative path: return StopAction would be illegal; so pick a dummy single if any.
-                return StopAction.INSTANCE; // If your engine requires an explicit "ROLL" action type, create it. Otherwise STOP is safest.
+                // instant bust on real roll → end turn
+                return StopAction.INSTANCE;
             }
+
             Move bestMove = bestMoveForRoll(state, realRoll, rollDepth);
             return new RollAction(bestMove);
         }
     }
+
 
     // ---------------------------
     // Evaluation helpers

@@ -20,7 +20,7 @@ import java.util.Random;
 public final class SimulationDemoAI {
 
     public static void main(String[] args) {
-        int games = argOr(args, 0, 20);
+        int games = argOr(args, 0, 10);
         int rollDepth = argOr(args, 1, AIPlayer.DEFAULT_DEPTH_ROLL_PHASE);
         int stopDepth = argOr(args, 2, AIPlayer.DEFAULT_DEPTH_AFTER_STOP);
         long seed = argOr(args, 3, System.nanoTime());
