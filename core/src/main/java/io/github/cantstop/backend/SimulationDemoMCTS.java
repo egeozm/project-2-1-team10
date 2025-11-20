@@ -8,7 +8,7 @@ import java.util.Locale;
 import java.util.Random;
 
 /**
- * Simple simulator to pit two MCTSPlayers against each other.
+ * Simple simulator that pits two MCTSPlayers against each other.
  *
  * Usage (all args optional):
  *   java io.github.cantstop.backend.SimulationDemoMCTS [games] [iterations] [rolloutMaxRolls] [seed] [verbose]
@@ -25,19 +25,19 @@ public final class SimulationDemoMCTS {
     public static void main(String[] args) {
         Locale.setDefault(Locale.ROOT);
 
-        int games           = argOr(args, 0, 20);
+        int games           = argOr(args, 0, 1);
         int iterations      = argOr(args, 1, 8000);
         int rolloutMaxRolls = argOr(args, 2, 4);
         long seed           = argOr(args, 3, System.nanoTime());
         boolean verbose     = boolOr(args, 4, true);
 
-        double c = Math.sqrt(2.0); // exploration constant
+        double c = Math.sqrt(2.0); // UCT exploration constant
 
         int redWins = 0, blueWins = 0;
         long totalActions = 0;
 
         for (int g = 0; g < games; g++) {
-            // Fresh RNGs (lightly decorrelated per game)
+            // Fresh RNGs (lightly decorrelated per game index)
             Random redRngMcts  = new Random(seed ^ (g * 0x9E3779B97F4A7C15L));
             Random blueRngMcts = new Random(seed ^ (g * 0xC2B2AE3D27D4EB4FL));
             Random redRngDice  = new Random(seed ^ (g * 0x94D049BB133111EBL));
@@ -48,7 +48,7 @@ public final class SimulationDemoMCTS {
             MCTSController redCtrl  = new MCTSController(redMcts,  redRngDice);
             MCTSController blueCtrl = new MCTSController(blueMcts, blueRngDice);
 
-            // U WAS: konstruktor GameState jest prywatny → używamy fabryki initialize(Player.RED)
+            // In your codebase: GameState has a private constructor → use factory method
             GameState state = GameState.initialize(Player.RED);
 
             int actionsThisGame = playSingleGame(state, redCtrl, blueCtrl, verbose);
@@ -70,15 +70,19 @@ public final class SimulationDemoMCTS {
     }
 
     /**
-     * Plays a single game until a player satisfies the win condition.
-     * At each decision we use the MCTSController to perform STOP or ROLL (and, for no-bust, choose MOVE).
+     * Plays one full game until a player satisfies the win condition.
+     * Each decision is executed via MCTSController:
+     *   - In ROLL_OR_STOP: it chooses STOP or ROLL. If ROLL leads to no-bust, it also chooses a MOVE.
+     *   - In CHOOSE_MOVE: it chooses a concrete MOVE for the last dice roll.
      *
-     * @return number of applied actions (STOPs + MOVEs) in this game
+     * We count "actions" as STOPs and MOVEs applied (ROLL does not mutate the state by itself).
+     *
+     * @return number of applied actions in this game
      */
     private static int playSingleGame(GameState state, MCTSController redCtrl, MCTSController blueCtrl, boolean verbose) {
         int actions = 0;
 
-        // Safety valve
+        // Safety valve against accidental infinite loops
         final int MAX_ACTIONS_SAFETY = 4000;
 
         while (!TurnManager.checkWinCondition(state, Player.RED)
@@ -89,8 +93,8 @@ public final class SimulationDemoMCTS {
                 System.out.printf("\n[%s] turn starts\n", turnOwner);
             }
 
-            // Jedna tura: MCTS wykonuje STOP/ROLL i ewentualny MOVE po no-bust,
-            // aż do STOP/BUST/terminal (czyli zmiany gracza lub końca gry).
+            // One turn: MCTS will keep deciding STOP/ROLL and (on no-bust) a MOVE
+            // until STOP/BUST or terminal state (win), i.e., until the player changes or game ends.
             while (!TurnManager.checkWinCondition(state, Player.RED)
                 && !TurnManager.checkWinCondition(state, Player.BLUE)
                 && state.getCurrentPlayer() == turnOwner) {
@@ -101,7 +105,7 @@ public final class SimulationDemoMCTS {
 
                 if (verbose) printExecLog(turnOwner, log);
 
-                // Liczymy każdą „aplikację” (STOP albo MOVE); sam ROLL nie zmienia stanu bezpośrednio.
+                // Count applied actions: STOP or MOVE. ROLL alone does not mutate the board.
                 if (log.firstAction != null && log.firstAction.isStop()) actions++;
                 if (log.chosenMove != null) actions++;
 
@@ -120,6 +124,7 @@ public final class SimulationDemoMCTS {
 
     // ----------------- logging helpers -----------------
 
+    /** Pretty-prints one controller step for debugging/analysis. */
     private static void printExecLog(Player p, MCTSController.ExecLog log) {
         StringBuilder sb = new StringBuilder();
         sb.append("[").append(p).append("] ");
