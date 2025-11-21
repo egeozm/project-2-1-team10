@@ -1,4 +1,4 @@
-package io.github.cantstop.backend.AI;
+package io.github.cantstop.backend.AI_Expectiminimax;
 
 import io.github.cantstop.backend.*;
 
@@ -16,7 +16,7 @@ import java.util.*;
  * - StopAction (commit current temp runners)
  * - RollAction(Move m) (apply a legal move for the given dice roll)
  */
-public final class AIPlayer {
+public final class ExpectiminimaxPlayer {
 
     // Small epsilon to break evaluation ties
     private static final double EPS = 1e-9;
@@ -41,11 +41,11 @@ public final class AIPlayer {
     // optional: deadline for timed search
     private long searchDeadlineNanos = Long.MAX_VALUE;
 
-    public AIPlayer() {
+    public ExpectiminimaxPlayer() {
         this(new Random());
     }
 
-    public AIPlayer(Random rng) {
+    public ExpectiminimaxPlayer(Random rng) {
         this.rng = Objects.requireNonNull(rng, "rng");
     }
 

@@ -1,6 +1,10 @@
-package io.github.cantstop.backend;
+package io.github.cantstop.backend.Simulations;
 
-import io.github.cantstop.backend.AI.AIPlayer;
+import io.github.cantstop.backend.AI_Expectiminimax.ExpectiminimaxPlayer;
+import io.github.cantstop.backend.GameState;
+import io.github.cantstop.backend.Move;
+import io.github.cantstop.backend.Player;
+import io.github.cantstop.backend.TurnManager;
 
 import java.util.Random;
 
@@ -17,12 +21,12 @@ import java.util.Random;
  * # 50 games, rollDepth=4, stopDepth=5, seed=42, verbose
  * java io.github.cantstop.backend.SimulationDemoAI 50 4 5 42 true
  */
-public final class SimulationDemoAI {
+public final class SimulationDemoExpectiminimax {
 
     public static void main(String[] args) {
         int games = argOr(args, 0, 10);
-        int rollDepth = argOr(args, 1, AIPlayer.DEFAULT_DEPTH_ROLL_PHASE);
-        int stopDepth = argOr(args, 2, AIPlayer.DEFAULT_DEPTH_AFTER_STOP);
+        int rollDepth = argOr(args, 1, ExpectiminimaxPlayer.DEFAULT_DEPTH_ROLL_PHASE);
+        int stopDepth = argOr(args, 2, ExpectiminimaxPlayer.DEFAULT_DEPTH_AFTER_STOP);
         long seed = argOr(args, 3, System.nanoTime());
         boolean verbose = boolOr(args, 4, false);
         int perMoveMillis = argOr(args, 5, 100); // default 100ms per decision
@@ -34,8 +38,8 @@ public final class SimulationDemoAI {
 
         for (int g = 0; g < games; g++) {
             // Fresh game, alternate seeds a little to avoid identical mirrors
-            AIPlayer redAI = new AIPlayer(new Random(seed ^ (g * 0x9E3779B97F4A7C15L)));
-            AIPlayer blueAI = new AIPlayer(new Random(seed ^ (g * 0xC2B2AE3D27D4EB4FL)));
+            ExpectiminimaxPlayer redAI = new ExpectiminimaxPlayer(new Random(seed ^ (g * 0x9E3779B97F4A7C15L)));
+            ExpectiminimaxPlayer blueAI = new ExpectiminimaxPlayer(new Random(seed ^ (g * 0xC2B2AE3D27D4EB4FL)));
 
             GameState state = GameState.initialize(Player.RED);
             int movesThisGame = playSingleGame(state, redAI, blueAI, rollDepth, stopDepth, verbose, perMoveMillis);
@@ -65,7 +69,7 @@ public final class SimulationDemoAI {
      * @return number of applied actions (moves + stops) in this game
      */
 
-    private static int playSingleGame(GameState state, AIPlayer redAI, AIPlayer blueAI, int rollDepth, int stopDepth, boolean verbose, int perMoveMillis) {
+    private static int playSingleGame(GameState state, ExpectiminimaxPlayer redAI, ExpectiminimaxPlayer blueAI, int rollDepth, int stopDepth, boolean verbose, int perMoveMillis) {
 
         int actions = 0;
 
@@ -75,7 +79,7 @@ public final class SimulationDemoAI {
         while (!TurnManager.checkWinCondition(state, Player.RED) && !TurnManager.checkWinCondition(state, Player.BLUE)) {
 
             Player current = state.getCurrentPlayer();
-            AIPlayer ai = (current == Player.RED) ? redAI : blueAI;
+            ExpectiminimaxPlayer ai = (current == Player.RED) ? redAI : blueAI;
 
             // One "turn" consists of repeated decisions until STOP or BUST
             boolean turnOver = false;
@@ -86,15 +90,15 @@ public final class SimulationDemoAI {
             while (!turnOver && !TurnManager.checkWinCondition(state, Player.RED) && !TurnManager.checkWinCondition(state, Player.BLUE)) {
 
                 // Ask AI what to do at this decision (no dice yet)
-                AIPlayer.Action action = ai.chooseActionWithTime(state, /*diceRoll=*/null, perMoveMillis);
+                ExpectiminimaxPlayer.Action action = ai.chooseActionWithTime(state, /*diceRoll=*/null, perMoveMillis);
                 actions++;
 
-                if (action instanceof AIPlayer.StopAction) {
+                if (action instanceof ExpectiminimaxPlayer.StopAction) {
                     if (verbose) System.out.printf("[%s] chooses STOP\n", current);
                     TurnManager.stop(state);         // commit temps, pass the turn
                     turnOver = true;                  // turn ends
-                } else if (action instanceof AIPlayer.RollAction) {
-                    Move m = ((AIPlayer.RollAction) action).move();
+                } else if (action instanceof ExpectiminimaxPlayer.RollAction) {
+                    Move m = ((ExpectiminimaxPlayer.RollAction) action).move();
                     if (verbose) System.out.printf("[%s] applies %s\n", current, m);
 
                     // Apply the move. If AI produced an illegal move (shouldn't happen), treat as bust.

@@ -1,6 +1,6 @@
 package io.github.cantstop.backend;
 
-import io.github.cantstop.backend.AI.RollBucketer;
+import io.github.cantstop.backend.AI_Expectiminimax.RollBucketer;
 
 import java.util.ArrayList;
 import java.util.List;

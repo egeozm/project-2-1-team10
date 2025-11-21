@@ -1,15 +1,15 @@
-package io.github.cantstop.backend.AI;
+package io.github.cantstop.backend.AI_RuleBased;
 
 import io.github.cantstop.backend.*;
 
 import java.util.*;
 
-public final class RuleBasedAgent {
+public final class RuleBasedPlayer {
 
     private final Random rng;
 
 
-    public RuleBasedAgent(Random rng) {
+    public RuleBasedPlayer(Random rng) {
         this.rng = Objects.requireNonNull(rng, "rng");
     }
 

@@ -1,8 +1,11 @@
-package io.github.cantstop.backend;
+package io.github.cantstop.backend.Simulations;
 
 import io.github.cantstop.backend.AI_MCTS.MCTSController;
 import io.github.cantstop.backend.AI_MCTS.MCTSPlayer;
 import io.github.cantstop.backend.AI_MCTS.MctsAction;
+import io.github.cantstop.backend.GameState;
+import io.github.cantstop.backend.Player;
+import io.github.cantstop.backend.TurnManager;
 
 import java.util.Locale;
 import java.util.Random;
@@ -11,14 +14,14 @@ import java.util.Random;
  * Simple simulator that pits two MCTSPlayers against each other.
  *
  * Usage (all args optional):
- *   java io.github.cantstop.backend.SimulationDemoMCTS [games] [iterations] [rolloutMaxRolls] [seed] [verbose]
+ *   java io.github.cantstop.backend.Simulations.SimulationDemoMCTS [games] [iterations] [rolloutMaxRolls] [seed] [verbose]
  *
  * Examples:
  *   # 20 games, default params, random seed, quiet
- *   java io.github.cantstop.backend.SimulationDemoMCTS 20
+ *   java io.github.cantstop.backend.Simulations.SimulationDemoMCTS 20
  *
  *   # 50 games, iterations=8000, rolloutMaxRolls=4, seed=42, verbose
- *   java io.github.cantstop.backend.SimulationDemoMCTS 50 8000 4 42 true
+ *   java io.github.cantstop.backend.Simulations.SimulationDemoMCTS 50 8000 4 42 true
  */
 public final class SimulationDemoMCTS {
 
@@ -29,7 +32,7 @@ public final class SimulationDemoMCTS {
         int iterations      = argOr(args, 1, 8000);
         int rolloutMaxRolls = argOr(args, 2, 4);
         long seed           = argOr(args, 3, System.nanoTime());
-        boolean verbose     = boolOr(args, 4, true);
+        boolean verbose     = boolOr(args, 4, false);
 
         double c = Math.sqrt(2.0); // UCT exploration constant
 
