@@ -1,0 +1,45 @@
+{
+  "timestamp": "2025-11-21T16:34:33.628967Z",
+  "matchSeed": 712003205316416,
+  "totalGames": 20,
+  "redWins": 0,
+  "blueWins": 20,
+  "totalActions": 1100,
+  "avgActionsPerGame": 55,00,
+  "checksum": -3866363669797767872,
+  "redAgent": {
+      "player": "RED",
+      "type": "MCTS",
+      "seed": 712006102531750,
+      "mctsIterations": 2000,
+      "mctsExplorationC": 1.414,
+      "mctsRolloutMax": 8
+    },
+  "blueAgent": {
+      "player": "BLUE",
+      "type": "RULE_BASED",
+      "seed": 712016596182041
+    },
+  "games": [
+    {"gameNumber":1,"winner":"BLUE","actionCount":50},
+    {"gameNumber":2,"winner":"BLUE","actionCount":63},
+    {"gameNumber":3,"winner":"BLUE","actionCount":53},
+    {"gameNumber":4,"winner":"BLUE","actionCount":69},
+    {"gameNumber":5,"winner":"BLUE","actionCount":56},
+    {"gameNumber":6,"winner":"BLUE","actionCount":46},
+    {"gameNumber":7,"winner":"BLUE","actionCount":56},
+    {"gameNumber":8,"winner":"BLUE","actionCount":46},
+    {"gameNumber":9,"winner":"BLUE","actionCount":65},
+    {"gameNumber":10,"winner":"BLUE","actionCount":66},
+    {"gameNumber":11,"winner":"BLUE","actionCount":61},
+    {"gameNumber":12,"winner":"BLUE","actionCount":61},
+    {"gameNumber":13,"winner":"BLUE","actionCount":53},
+    {"gameNumber":14,"winner":"BLUE","actionCount":46},
+    {"gameNumber":15,"winner":"BLUE","actionCount":55},
+    {"gameNumber":16,"winner":"BLUE","actionCount":39},
+    {"gameNumber":17,"winner":"BLUE","actionCount":45},
+    {"gameNumber":18,"winner":"BLUE","actionCount":50},
+    {"gameNumber":19,"winner":"BLUE","actionCount":63},
+    {"gameNumber":20,"winner":"BLUE","actionCount":57}
+  ]
+}

@@ -1,6 +1,10 @@
-package io.github.cantstop.backend;
+package io.github.cantstop.backend.Simulations;
 
-import io.github.cantstop.backend.AI.RuleBasedAgent;
+import io.github.cantstop.backend.AI_RuleBased.RuleBasedPlayer;
+import io.github.cantstop.backend.GameState;
+import io.github.cantstop.backend.Move;
+import io.github.cantstop.backend.Player;
+import io.github.cantstop.backend.TurnManager;
 
 import java.util.Random;
 
@@ -17,8 +21,8 @@ public final class SimulationDemoRuleBased {
         long totalMoves = 0;
 
         for (int g = 0; g < games; g++) {
-            RuleBasedAgent redAgent = new RuleBasedAgent(new Random(seed ^ (g * 0x9E3779B97F4A7C15L)), 9f);
-            RuleBasedAgent blueAgent = new RuleBasedAgent(new Random(seed ^ (g * 0xC2B2AE3D27D4EB4FL)), 9f);
+            RuleBasedPlayer redAgent = new RuleBasedPlayer(new Random(seed ^ (g * 0x9E3779B97F4A7C15L)));
+            RuleBasedPlayer blueAgent = new RuleBasedPlayer(new Random(seed ^ (g * 0xC2B2AE3D27D4EB4FL)));
 
             GameState state = GameState.initialize(Player.RED);
             int movesThisGame = playSingleGame(state, redAgent, blueAgent, verbose);
@@ -39,14 +43,14 @@ public final class SimulationDemoRuleBased {
         System.out.printf("Config: seed=%d\n", seed);
     }
 
-    private static int playSingleGame(GameState state, RuleBasedAgent redAgent, RuleBasedAgent blueAgent, boolean verbose) {
+    private static int playSingleGame(GameState state, RuleBasedPlayer redAgent, RuleBasedPlayer blueAgent, boolean verbose) {
 
         int actions = 0;
 
         while (!TurnManager.checkWinCondition(state, Player.RED) && !TurnManager.checkWinCondition(state, Player.BLUE)) {
 
             Player current = state.getCurrentPlayer();
-            RuleBasedAgent agent = (current == Player.RED) ? redAgent : blueAgent;
+            RuleBasedPlayer agent = (current == Player.RED) ? redAgent : blueAgent;
 
             boolean turnOver = false;
             if (verbose) {
@@ -54,15 +58,15 @@ public final class SimulationDemoRuleBased {
             }
 
             while (!turnOver && !TurnManager.checkWinCondition(state, Player.RED) && !TurnManager.checkWinCondition(state, Player.BLUE)) {
-                RuleBasedAgent.Action action = agent.rollOrStop(state);
+                RuleBasedPlayer.Action action = agent.chooseAction(state, null);
                 actions++;
 
-                if (action instanceof RuleBasedAgent.StopAction) {
+                if (action instanceof RuleBasedPlayer.StopAction) {
                     if (verbose) System.out.printf("[%s] chooses STOP\n", current);
                     TurnManager.stop(state);
                     turnOver = true;
-                } else if (action instanceof RuleBasedAgent.RollAction) {
-                    Move m = ((RuleBasedAgent.RollAction) action).move();
+                } else if (action instanceof RuleBasedPlayer.RollAction) {
+                    Move m = ((RuleBasedPlayer.RollAction) action).move();
                     if (verbose) System.out.printf("[%s] applies %s\n", current, m);
 
                     TurnManager.applyMove(state, m);

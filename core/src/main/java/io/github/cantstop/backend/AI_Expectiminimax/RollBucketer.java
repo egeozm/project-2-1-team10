@@ -1,4 +1,4 @@
-package io.github.cantstop.backend.AI;
+package io.github.cantstop.backend.AI_Expectiminimax;
 
 import java.util.*;
 

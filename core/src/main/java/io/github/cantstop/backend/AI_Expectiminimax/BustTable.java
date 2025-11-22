@@ -1,4 +1,4 @@
-package io.github.cantstop.backend.AI;
+package io.github.cantstop.backend.AI_Expectiminimax;
 
 final class BustTable {
     // For any bitmask S over sums 2..12, P[mask] = probability the next roll busts

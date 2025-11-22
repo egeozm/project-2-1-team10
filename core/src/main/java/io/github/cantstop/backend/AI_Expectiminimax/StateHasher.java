@@ -1,4 +1,4 @@
-package io.github.cantstop.backend.AI;
+package io.github.cantstop.backend.AI_Expectiminimax;
 
 import io.github.cantstop.backend.GameConstants;
 import io.github.cantstop.backend.GameState;
