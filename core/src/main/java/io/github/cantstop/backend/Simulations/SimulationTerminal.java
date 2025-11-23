@@ -126,7 +126,7 @@ public final class SimulationTerminal {
                 yield new AgentRuntime(spec, controller);
             }
             case RULE_BASED -> {
-                RuleBasedPlayer player = new RuleBasedPlayer(rng);
+                RuleBasedPlayer player = new RuleBasedPlayer(rng, 9f);
                 AgentController controller = state -> toDecision(player.chooseAction(state, null));
                 yield new AgentRuntime(spec, controller);
             }

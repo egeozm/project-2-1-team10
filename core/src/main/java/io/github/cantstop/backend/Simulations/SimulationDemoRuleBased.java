@@ -21,8 +21,8 @@ public final class SimulationDemoRuleBased {
         long totalMoves = 0;
 
         for (int g = 0; g < games; g++) {
-            RuleBasedPlayer redAgent = new RuleBasedPlayer(new Random(seed ^ (g * 0x9E3779B97F4A7C15L)));
-            RuleBasedPlayer blueAgent = new RuleBasedPlayer(new Random(seed ^ (g * 0xC2B2AE3D27D4EB4FL)));
+            RuleBasedPlayer redAgent = new RuleBasedPlayer(new Random(seed ^ (g * 0x9E3779B97F4A7C15L)), 9f);
+            RuleBasedPlayer blueAgent = new RuleBasedPlayer(new Random(seed ^ (g * 0xC2B2AE3D27D4EB4FL)), 9f);
 
             GameState state = GameState.initialize(Player.RED);
             int movesThisGame = playSingleGame(state, redAgent, blueAgent, verbose);
@@ -58,7 +58,7 @@ public final class SimulationDemoRuleBased {
             }
 
             while (!turnOver && !TurnManager.checkWinCondition(state, Player.RED) && !TurnManager.checkWinCondition(state, Player.BLUE)) {
-                RuleBasedPlayer.Action action = agent.chooseAction(state, null);
+                RuleBasedPlayer.Action action = agent.chooseAction(state, state.getLastRoll());
                 actions++;
 
                 if (action instanceof RuleBasedPlayer.StopAction) {

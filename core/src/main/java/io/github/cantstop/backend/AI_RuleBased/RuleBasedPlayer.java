@@ -1,15 +1,17 @@
-package io.github.cantstop.backend.AI;
+package io.github.cantstop.backend.AI_RuleBased;
 
 import io.github.cantstop.backend.*;
+import io.github.cantstop.backend.AI_Expectiminimax.BustTable;
+import io.github.cantstop.backend.AI_Expectiminimax.ExpectiminimaxPlayer;
 
 import java.util.*;
 
-public final class RuleBasedAgent {
+public final class RuleBasedPlayer {
 
     private final Random rng;
     private final float riskAversion; // higher value = more likely to stop
 
-    public RuleBasedAgent(Random rng, float riskAversion) {
+    public RuleBasedPlayer(Random rng, float riskAversion) {
         this.rng = Objects.requireNonNull(rng, "rng");
         this.riskAversion = riskAversion;
     }
@@ -19,20 +21,58 @@ public final class RuleBasedAgent {
     // highest possible value is about 0.28 (if 3 columns have been entirely progressed through by temporary markers in just this turn)
     // riskAversion is a linear scalar for progressValue, so higher risk aversion means more likely to stop
     // 1 = extremely risky, good strategy is probably somewhere around 6 to 12
-    public Action rollOrStop(GameState state) {
+    public Action chooseAction(GameState state, DiceRoll diceRoll) {
+        if (diceRoll != null) {
+            // We already rolled: according to rules, we MUST play this roll (or bust),
+            // we are NOT allowed to choose STOP here.
 
-        float bustChance = computeBustChance(state); // value between 0 and 1
-        float progressValue = computeProgressValue(state);
+            List<Move> legal = TurnManager.getLegalMoves(state, diceRoll);
+            if (legal.isEmpty()) {
+                // No legal move → bust. The engine should handle bust when it sees there
+                // are no moves for this roll; we just signal "end of turn".
+                return StopAction.INSTANCE;
+            }
 
-        if (progressValue + bustChance > 1f) {
-            return StopAction.INSTANCE;
+            Move bestMove = chooseMove(state);
+            return new RollAction(bestMove);
         } else {
-            return RollAction;
+            // No roll yet: decide between STOP and the expected value of ROLL.
+
+            float bustChance = computeBustChance(state); // value between 0 and 1
+            float progressValue = computeProgressValue(state);
+
+            if (progressValue + bustChance > 1f) {
+                return StopAction.INSTANCE;
+            }
+
+            // We chose to roll; now actually roll and pick the move for that real outcome
+            DiceRoll realRoll = DiceRoll.roll(rng);
+            List<Move> legal = TurnManager.getLegalMoves(state, realRoll);
+            if (legal.isEmpty()) {
+                // instant bust on real roll → end turn
+                return StopAction.INSTANCE;
+            }
+
+            Move bestMove = chooseMove(state);
+            return new RollAction(bestMove);
         }
     }
 
     private float computeBustChance(GameState state) {
 
+        int mask = allowedSumsMask(state);
+        return (float) BustTable.P[mask];
+    }
+
+    // Build allowed-sums bitmask from the current state's legality of singles
+    private int allowedSumsMask(GameState s) {
+        int mask = 0;
+        for (int sum = GameConstants.COL_MIN; sum <= GameConstants.COL_MAX; sum++) {
+            if (TurnManager.isSinglePlayable(s, sum)) {
+                mask |= (1 << (sum - 2));
+            }
+        }
+        return mask;
     }
 
     private float computeProgressValue(GameState state) {

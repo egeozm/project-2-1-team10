@@ -1,8 +1,8 @@
 package io.github.cantstop.backend.AI_Expectiminimax;
 
-final class BustTable {
+public final class BustTable {
     // For any bitmask S over sums 2..12, P[mask] = probability the next roll busts
-    static final double[] P = new double[1 << 11];
+    public static final double[] P = new double[1 << 11];
 
     static {
         for (int mask = 0; mask < (1 << 11); mask++) {
