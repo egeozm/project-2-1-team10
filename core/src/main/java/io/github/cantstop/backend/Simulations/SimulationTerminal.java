@@ -155,7 +155,7 @@ public final class SimulationTerminal {
                                       AgentRuntime red,
                                       AgentRuntime blue,
                                       boolean verbose) {
-        final int MAX_ACTIONS = 2_000;
+        final int MAX_ACTIONS = 300;
         int actions = 0;
 
         while (!TurnManager.checkWinCondition(state, Player.RED)
