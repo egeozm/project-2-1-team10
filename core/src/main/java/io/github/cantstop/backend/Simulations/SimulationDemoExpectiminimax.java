@@ -24,11 +24,11 @@ import java.util.Random;
 public final class SimulationDemoExpectiminimax {
 
     public static void main(String[] args) {
-        int games = argOr(args, 0, 10);
+        int games = argOr(args, 0, 2);
         int rollDepth = argOr(args, 1, ExpectiminimaxPlayer.DEFAULT_DEPTH_ROLL_PHASE);
         int stopDepth = argOr(args, 2, ExpectiminimaxPlayer.DEFAULT_DEPTH_AFTER_STOP);
         long seed = argOr(args, 3, System.nanoTime());
-        boolean verbose = boolOr(args, 4, false);
+        boolean verbose = boolOr(args, 4, true);
         int perMoveMillis = argOr(args, 5, 100); // default 100ms per decision
 
         Random matchRng = new Random(seed);

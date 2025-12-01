@@ -35,8 +35,42 @@ public final class ExpectiminimaxPlayer {
     // killer move tiny cache (optional but helpful)
     private final Map<Long, Move> killer = new HashMap<>();
 
-    // bust penalty weight (tune later)
-    private static final double LAMBDA_BUST = 80.0;
+    // Heuristic weights (consistent across evaluation)
+    private static final double W_PROGRESS = 0.6;
+    private static final double W_TEMPO = 0.08;
+    private static final double W_NEARWIN = 0.3;
+    private static final double W_LOCKS = 0.1;
+
+    // Calculate maximum possible heuristic value
+    // Max progress: all columns at max height = NUM_COLS
+    // Max tempo: MAX_TEMP_RUNNERS active runners
+    // Max near wins: TO_WIN (3)
+    // Max locks: TO_WIN (3)
+    // Maximum heuristic difference (one player has everything, opponent has nothing):
+    private static final double MAX_HEURISTIC_VALUE = 
+        W_PROGRESS * GameConstants.NUM_COLS +  // max progress difference
+        W_TEMPO * GameConstants.MAX_TEMP_RUNNERS +  // max tempo difference
+        W_NEARWIN * GameConstants.TO_WIN +  // max near win difference
+        W_LOCKS * GameConstants.TO_WIN;  // max lock difference
+
+    // Win value should be significantly larger than any possible heuristic
+    // Using 100x the maximum heuristic ensures wins are always preferred
+    private static final double WIN_VALUE_MULTIPLIER = 100.0;
+    private static final double WIN_VALUE = MAX_HEURISTIC_VALUE * WIN_VALUE_MULTIPLIER;
+    private static final double LOSS_VALUE = -WIN_VALUE;
+
+    // Bust penalty: calculated relative to maximum heuristic
+    // Original value was 80.0, which is approximately 10x the max heuristic
+    // This ensures bust penalty is significant but not overwhelming
+    private static final double BUST_PENALTY_MULTIPLIER = 10.0;
+    private static final double LAMBDA_BUST = MAX_HEURISTIC_VALUE * BUST_PENALTY_MULTIPLIER;
+
+    // Move scoring weights: derived from heuristic weights for consistency
+    // These should be proportional to the heuristic weights
+    private static final double MOVE_SCORE_WIN = WIN_VALUE / 10.0; // Immediate win bonus
+    private static final double MOVE_SCORE_LOCK = W_LOCKS * 100.0; // Proportional to lock weight
+    private static final double MOVE_SCORE_NEAR = W_NEARWIN * 100.0; // Proportional to near-win weight
+    private static final double MOVE_SCORE_RUNNER_PENALTY = 5.0; // Small penalty for extra runners
 
     // optional: deadline for timed search
     private long searchDeadlineNanos = Long.MAX_VALUE;
@@ -107,8 +141,8 @@ public final class ExpectiminimaxPlayer {
         TurnManager.stop(next);
 
         Player me = state.getCurrentPlayer();
-        if (TurnManager.checkWinCondition(next, me)) return 1_000_000.0;
-        if (TurnManager.checkWinCondition(next, me.opponent())) return -1_000_000.0;
+        if (TurnManager.checkWinCondition(next, me)) return WIN_VALUE;
+        if (TurnManager.checkWinCondition(next, me.opponent())) return LOSS_VALUE;
 
         return expectiminimax(next, depth - 1, /*maximize=*/false);
     }
@@ -139,10 +173,12 @@ public final class ExpectiminimaxPlayer {
         if (legal.isEmpty()) {
             GameState bust = state.copy();
             TurnManager.bust(bust);
+            // After bust, turn switches to opponent, so flip maximize
             double val = expectiminimax(bust, depth - 1, /*maximize=*/false);
             Player me = state.getCurrentPlayer();
-            if (TurnManager.checkWinCondition(bust, me)) return 1_000_000 + val;
-            if (TurnManager.checkWinCondition(bust, me.opponent())) return -1_000_000 + val;
+            // After bust, current player is the opponent, so check win conditions correctly
+            if (TurnManager.checkWinCondition(bust, me.opponent())) return WIN_VALUE + val;
+            if (TurnManager.checkWinCondition(bust, me)) return LOSS_VALUE + val;
             return val;
         }
 
@@ -150,7 +186,8 @@ public final class ExpectiminimaxPlayer {
         for (Move m : legal) {
             GameState child = state.copy();
             TurnManager.applyMove(child, m);
-            double v = expectiminimax(child, depth - 1, /*maximize=*/false);
+            // After applyMove, same player continues, so keep maximize the same (true)
+            double v = expectiminimax(child, depth - 1, /*maximize=*/true);
             if (v > best) best = v;
         }
         return best;
@@ -166,7 +203,8 @@ public final class ExpectiminimaxPlayer {
         for (Move m : legal) {
             GameState child = state.copy();
             TurnManager.applyMove(child, m);
-            double v = expectiminimax(child, depth - 1, /*maximize=*/false);
+            // After applyMove, same player continues, so keep maximize the same (true)
+            double v = expectiminimax(child, depth - 1, /*maximize=*/true);
             if (v > bestScore - EPS) {
                 bestScore = v;
                 best = m;
@@ -214,12 +252,32 @@ public final class ExpectiminimaxPlayer {
         boolean blueWin = TurnManager.checkWinCondition(state, blue);
 
         Player current = state.getCurrentPlayer();
-        if (redWin && !blueWin) return (red == current) ? 10_000.0 : -10_000.0;
-        if (blueWin && !redWin) return (blue == current) ? 10_000.0 : -10_000.0;
+        // maximize=true means current player is the root (maximizing) player
+        // maximize=false means current player is the opponent (minimizing) player
+        if (redWin && !blueWin) {
+            // Red wins
+            if (maximize) {
+                return (red == current) ? WIN_VALUE : LOSS_VALUE;
+            } else {
+                return (red == current) ? LOSS_VALUE : WIN_VALUE;
+            }
+        }
+        if (blueWin && !redWin) {
+            // Blue wins
+            if (maximize) {
+                return (blue == current) ? WIN_VALUE : LOSS_VALUE;
+            } else {
+                return (blue == current) ? LOSS_VALUE : WIN_VALUE;
+            }
+        }
         if (redWin && blueWin) return 0.0;
 
         if (depth <= 0) {
-            return heuristicWithRisk(state);
+            // Heuristic should be from the perspective of the root player
+            // If maximize=true, current player is root, so evaluate from current player's perspective
+            // If maximize=false, opponent is root, so negate the evaluation from current player's perspective
+            double h = heuristicWithRisk(state);
+            return maximize ? h : -h;
         }
 
         double result;
@@ -277,6 +335,7 @@ public final class ExpectiminimaxPlayer {
     }
 
     private double heuristicWithRisk(GameState s) {
+        // Evaluate from current player's perspective
         double base = heuristic(s, s.getCurrentPlayer());
         int mask = allowedSumsMask(s);
         double bustProb = BustTable.P[mask];
@@ -307,7 +366,9 @@ public final class ExpectiminimaxPlayer {
                                      double beta) {
         if (depth <= 0 || TurnManager.checkWinCondition(state, Player.RED)
             || TurnManager.checkWinCondition(state, Player.BLUE)) {
-            return heuristicWithRisk(state);
+            // Heuristic should be from the perspective of the root player
+            double h = heuristicWithRisk(state);
+            return maximize ? h : -h;
         }
 
         double weighted = 0.0;
@@ -316,7 +377,9 @@ public final class ExpectiminimaxPlayer {
         for (var e : RollBucketer.ENTRIES) {
             // Time guard
             if ((total & 63) == 0 && System.nanoTime() >= searchDeadlineNanos) {
-                return heuristicWithRisk(state);
+                // Heuristic should be from the perspective of the root player
+                double h = heuristicWithRisk(state);
+                return maximize ? h : -h;
             }
 
             int pa = e.bucket.a, pb = e.bucket.b, pc = e.bucket.c;
@@ -326,6 +389,7 @@ public final class ExpectiminimaxPlayer {
             if (legal.isEmpty()) {
                 GameState bust = state.copy();
                 TurnManager.bust(bust);
+                // After bust, turn switches to opponent, so flip maximize
                 childValue = expectiminimax(bust, depth - 1, !maximize, alpha, beta);
             } else {
                 double best = maximize ? Double.NEGATIVE_INFINITY : Double.POSITIVE_INFINITY;
@@ -333,13 +397,17 @@ public final class ExpectiminimaxPlayer {
                 for (Move m : orderMoves(state, maybeKiller(state), legal)) {
                     GameState child = state.copy();
                     TurnManager.applyMove(child, m);
-                    double v = expectiminimax(child, depth - 1, !maximize, alpha, beta);
+                    // After applyMove, same player continues, so keep maximize the same
+                    double v = expectiminimax(child, depth - 1, maximize, alpha, beta);
 
                     if (maximize) {
                         if (v > best) best = v;
+                        alpha = Math.max(alpha, best);
                     } else {
                         if (v < best) best = v;
+                        beta = Math.min(beta, best);
                     }
+                    if (alpha >= beta) break; // alpha-beta pruning
                 }
                 childValue = best;
             }
@@ -396,7 +464,11 @@ public final class ExpectiminimaxPlayer {
         int activeAfter = tmp.countActiveColumns();
         int extraRunners = Math.max(0, activeAfter - activeBefore);
 
-        return 1000 * completesThird + 200 * deltaLocks + 80 * deltaNear - 5 * extraRunners;
+        // Use consistent weights derived from heuristic weights
+        return MOVE_SCORE_WIN * completesThird + 
+               MOVE_SCORE_LOCK * deltaLocks + 
+               MOVE_SCORE_NEAR * deltaNear - 
+               MOVE_SCORE_RUNNER_PENALTY * extraRunners;
     }
 
 
@@ -435,20 +507,20 @@ public final class ExpectiminimaxPlayer {
             if (current == opp && temp > 0) oppActive++;
         }
 
-        // Positional terms
-        double progressTerm = 0.6 * (myProgress - oppProgress);
-        double tempoTerm = 0.08 * (myActive - oppActive);
+        // Positional terms (using consistent weights)
+        double progressTerm = W_PROGRESS * (myProgress - oppProgress);
+        double tempoTerm = W_TEMPO * (myActive - oppActive);
 
         // Strongly prefer near-wins
         double winProximityTerm = 0.0;
         int nearWins = nearWinCount(state, player);
         int oppNearWins = nearWinCount(state, opp);
-        winProximityTerm += 0.3 * nearWins - 0.3 * oppNearWins;
+        winProximityTerm += W_NEARWIN * nearWins - W_NEARWIN * oppNearWins;
 
         // Slight penalty if opponent has many locked columns and you have none
         int myLocks = countLocks(state, player);
         int oppLocks = countLocks(state, opp);
-        double lockTerm = 0.1 * (myLocks - oppLocks);
+        double lockTerm = W_LOCKS * (myLocks - oppLocks);
 
         // Small noise to break ties deterministically
         double noise = rng.nextDouble() * 1e-6;
