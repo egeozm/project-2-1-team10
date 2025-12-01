@@ -1,4 +1,4 @@
-package io.github.cantstop.backend.Simulations;
+package io.github.cantstop.backend.Experiments.RSQ4;
 
 import io.github.cantstop.backend.AI_Expectiminimax.ExpectiminimaxPlayer;
 import io.github.cantstop.backend.GameState;
@@ -10,27 +10,34 @@ import java.util.*;
 
 /**
  * Tool to systematically find optimal depth parameters for ExpectiminimaxPlayer.
- * 
+ *
  * Usage:
- *   java io.github.cantstop.backend.Simulations.DepthOptimizer [gamesPerConfig] [minRollDepth] [maxRollDepth] [minStopDepth] [maxStopDepth] [seed] [timeBudgetMs]
- * 
+ *   java io.github.cantstop.backend.Simulations.DepthOptimizer [gamesPerConfig] [minRollDepth] [maxRollDepth] [minStopDepth] [maxStopDepth] [seed] [timeBudgetMs] [quickMode]
+ *
  * Examples:
- *   # Test depths 2-5 for roll and 3-6 for stop, 20 games each, default time budget
- *   java io.github.cantstop.backend.Simulations.DepthOptimizer 20 2 5 3 6
- * 
- *   # Test depths 1-4 for both, 50 games each, 200ms per move
- *   java io.github.cantstop.backend.Simulations.DepthOptimizer 50 1 4 1 4 42 200
+ *   # Quick test: 5 games each, depths 2-4 for roll, 3-5 for stop (recommended for initial testing)
+ *   java io.github.cantstop.backend.Simulations.DepthOptimizer 5 2 4 3 5
+ *
+ *   # Quick mode: skip problematic configs automatically
+ *   java io.github.cantstop.backend.Simulations.DepthOptimizer 5 2 4 3 5 42 0 1
+ *
+ *   # Time-based search (often faster): 50ms per move
+ *   java io.github.cantstop.backend.Simulations.DepthOptimizer 5 2 4 3 5 42 50
+ *
+ *   # More comprehensive: 10 games each
+ *   java io.github.cantstop.backend.Simulations.DepthOptimizer 10 2 5 3 6
  */
 public final class DepthOptimizer {
 
     public static void main(String[] args) {
-        int gamesPerConfig = argOr(args, 0, 20);
-        int minRollDepth = argOr(args, 1, 1);
-        int maxRollDepth = argOr(args, 2, 5);
-        int minStopDepth = argOr(args, 3, 1);
-        int maxStopDepth = argOr(args, 4, 6);
+        int gamesPerConfig = argOr(args, 0, 5); // Reduced default from 20 to 5 for faster testing
+        int minRollDepth = argOr(args, 1, 2); // Start from 2, depth 1 is often problematic
+        int maxRollDepth = argOr(args, 2, 4);
+        int minStopDepth = argOr(args, 3, 3); // Start from 3, depth 1-2 are often problematic
+        int maxStopDepth = argOr(args, 4, 5);
         long seed = argOr(args, 5, System.nanoTime());
         int timeBudgetMs = argOr(args, 6, 0); // 0 = use fixed depth, >0 = use timed search
+        boolean quickMode = argOr(args, 7, 0) == 1; // Quick mode: fewer games, skip problematic configs
 
         System.out.println("=======================================");
         System.out.println("  Expectiminimax Depth Optimization   ");
@@ -44,6 +51,9 @@ public final class DepthOptimizer {
         } else {
             System.out.println("Using fixed depth search");
         }
+        if (quickMode) {
+            System.out.println("QUICK MODE: Skipping problematic configurations");
+        }
         System.out.println("=======================================\n");
 
         List<DepthResult> results = new ArrayList<>();
@@ -55,15 +65,23 @@ public final class DepthOptimizer {
         for (int rollDepth = minRollDepth; rollDepth <= maxRollDepth; rollDepth++) {
             for (int stopDepth = minStopDepth; stopDepth <= maxStopDepth; stopDepth++) {
                 configNum++;
-                System.out.printf("[%d/%d] Testing rollDepth=%d, stopDepth=%d... ", 
+                System.out.printf("[%d/%d] Testing rollDepth=%d, stopDepth=%d... ",
                     configNum, totalConfigs, rollDepth, stopDepth);
                 System.out.flush();
 
                 DepthResult result = testConfiguration(rollDepth, stopDepth, gamesPerConfig, seed, timeBudgetMs);
+
+                // Skip problematic configs in quick mode
+                if (quickMode && result.avgMoves >= 290) {
+                    System.out.printf("SKIPPED (hits limit)%n");
+                    continue;
+                }
+
                 results.add(result);
 
-                System.out.printf("Win rate: %.1f%% (avg moves: %.1f, avg time: %.1f ms)%n",
-                    result.winRate * 100, result.avgMoves, result.avgTimeMs);
+                String status = result.avgMoves >= 290 ? " (HIT LIMIT)" : "";
+                System.out.printf("Win rate: %.1f%% (avg moves: %.1f, avg time: %.1f ms)%s%n",
+                    result.winRate * 100, result.avgMoves, result.avgTimeMs, status);
             }
         }
 
@@ -104,6 +122,8 @@ public final class DepthOptimizer {
         int wins = 0;
         long totalMoves = 0;
         long totalTimeNs = 0;
+        int gamesThatHitLimit = 0;
+        final int MAX_ACTIONS_PER_GAME = 300; // Early termination for testing
 
         for (int g = 0; g < games; g++) {
             long gameStartNs = System.nanoTime();
@@ -113,37 +133,49 @@ public final class DepthOptimizer {
             ExpectiminimaxPlayer blueAI = new ExpectiminimaxPlayer(new Random(seed ^ (g * 0xC2B2AE3D27D4EB4FL)));
 
             GameState state = GameState.initialize(Player.RED);
-            int moves = playGame(state, redAI, blueAI, rollDepth, stopDepth, timeBudgetMs);
+            int moves = playGame(state, redAI, blueAI, rollDepth, stopDepth, timeBudgetMs, MAX_ACTIONS_PER_GAME);
+
+            if (moves >= MAX_ACTIONS_PER_GAME) {
+                gamesThatHitLimit++;
+            }
 
             Player winner = TurnManager.checkWinCondition(state, Player.RED) ? Player.RED : Player.BLUE;
             if (winner == Player.RED) wins++;
 
             totalMoves += moves;
             totalTimeNs += System.nanoTime() - gameStartNs;
+
+            // Show progress for long-running tests
+            if (games > 5 && (g + 1) % Math.max(1, games / 5) == 0) {
+                System.out.print(".");
+                System.out.flush();
+            }
         }
+
+        // If more than half the games hit the limit, this config is problematic
+        double winRate = gamesThatHitLimit >= games / 2 ? 0.0 : (double) wins / games;
 
         return new DepthResult(
             rollDepth, stopDepth,
-            (double) wins / games,
+            winRate,
             (double) totalMoves / games,
             totalTimeNs / (games * 1_000_000.0) // convert to ms
         );
     }
 
     private static int playGame(GameState state, ExpectiminimaxPlayer redAI, ExpectiminimaxPlayer blueAI,
-                                 int rollDepth, int stopDepth, int timeBudgetMs) {
+                                 int rollDepth, int stopDepth, int timeBudgetMs, int maxActions) {
         int actions = 0;
-        final int MAX_ACTIONS = 2000;
 
-        while (!TurnManager.checkWinCondition(state, Player.RED) && 
-               !TurnManager.checkWinCondition(state, Player.BLUE) && 
-               actions < MAX_ACTIONS) {
+        while (!TurnManager.checkWinCondition(state, Player.RED) &&
+               !TurnManager.checkWinCondition(state, Player.BLUE) &&
+               actions < maxActions) {
 
             Player current = state.getCurrentPlayer();
             ExpectiminimaxPlayer ai = (current == Player.RED) ? redAI : blueAI;
 
             boolean turnOver = false;
-            while (!turnOver && actions < MAX_ACTIONS) {
+            while (!turnOver && actions < maxActions) {
                 ExpectiminimaxPlayer.Action action;
                 if (timeBudgetMs > 0) {
                     action = ai.chooseActionWithTime(state, null, timeBudgetMs);

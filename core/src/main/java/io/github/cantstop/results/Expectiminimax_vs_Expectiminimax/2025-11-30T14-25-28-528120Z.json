@@ -1,0 +1,36 @@
+{
+  "timestamp": "2025-11-30T14:25:25.010611Z",
+  "matchSeed": 1258924260912541,
+  "totalGames": 10,
+  "redWins": 0,
+  "blueWins": 10,
+  "totalActions": 20000,
+  "avgActionsPerGame": 2000,00,
+  "checksum": 172902294311021742,
+  "redAgent": {
+      "player": "RED",
+      "type": "EXPECTIMINIMAX_DEPTH",
+      "seed": 1258932962305833,
+      "rollDepth": 3,
+      "stopDepth": 4
+    },
+  "blueAgent": {
+      "player": "BLUE",
+      "type": "EXPECTIMINIMAX_DEPTH",
+      "seed": 1258943439423583,
+      "rollDepth": 2,
+      "stopDepth": 3
+    },
+  "games": [
+    {"gameNumber":1,"winner":"BLUE","actionCount":2000},
+    {"gameNumber":2,"winner":"BLUE","actionCount":2000},
+    {"gameNumber":3,"winner":"BLUE","actionCount":2000},
+    {"gameNumber":4,"winner":"BLUE","actionCount":2000},
+    {"gameNumber":5,"winner":"BLUE","actionCount":2000},
+    {"gameNumber":6,"winner":"BLUE","actionCount":2000},
+    {"gameNumber":7,"winner":"BLUE","actionCount":2000},
+    {"gameNumber":8,"winner":"BLUE","actionCount":2000},
+    {"gameNumber":9,"winner":"BLUE","actionCount":2000},
+    {"gameNumber":10,"winner":"BLUE","actionCount":2000}
+  ]
+}

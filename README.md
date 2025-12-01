@@ -1,130 +1,175 @@
-# CantStop_Group10
+# Can't Stop Game Implementation
 
-A [libGDX](https://libgdx.com/) project generated with [gdx-liftoff](https://github.com/libgdx/gdx-liftoff).
+A complete implementation of the Can't Stop board game with multiple AI players and a graphical user interface.
 
-This project was generated with a template including simple application launchers and a main class extending `Game` that sets the first screen.
+## Overview
 
-## Platforms
+This project implements the Can't Stop dice game with:
+- Graphical user interface using libGDX
+- Multiple AI player implementations (Expectiminimax, MCTS, Rule-based)
+- Simulation tools for AI evaluation and testing
+- Complete game logic and rule enforcement
 
-- `core`: Main module with the application logic shared by all platforms.
-- `lwjgl3`: Primary desktop platform using LWJGL3; was called 'desktop' in older docs.
+## Game Rules
 
-## Gradle
+Can't Stop is a dice game where players race to complete three columns on the board. Players roll four dice, pair them into two sums, and advance markers on columns corresponding to those sums. Players can continue rolling or stop to commit their progress. The first player to complete three columns wins.
 
-This project uses [Gradle](https://gradle.org/) to manage dependencies.
-The Gradle wrapper was included, so you can run Gradle tasks using `gradlew.bat` or `./gradlew` commands.
-Useful Gradle tasks and flags:
-
-- `--continue`: when using this flag, errors will not stop the tasks from running.
-- `--daemon`: thanks to this flag, Gradle daemon will be used to run chosen tasks.
-- `--offline`: when using this flag, cached dependency archives will be used.
-- `--refresh-dependencies`: this flag forces validation of all dependencies. Useful for snapshot versions.
-- `build`: builds sources and archives of every project.
-- `cleanEclipse`: removes Eclipse project data.
-- `cleanIdea`: removes IntelliJ project data.
-- `clean`: removes `build` folders, which store compiled classes and built archives.
-- `eclipse`: generates Eclipse project data.
-- `idea`: generates IntelliJ project data.
-- `lwjgl3:jar`: builds application's runnable jar, which can be found at `lwjgl3/build/libs`.
-- `lwjgl3:run`: starts the application.
-- `test`: runs unit tests (if any).
-
-Note that most tasks that are not specific to a single project can be run with `name:` prefix, where the `name` should be replaced with the ID of a specific project.
-For example, `core:clean` removes `build` folder only from the `core` project.
-
-
-
-
-# Team_10
-
-
-
-## Getting started
-
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+## Project Structure
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.maastrichtuniversity.nl/project-2-1-25-26/dsai/team_10.git
-git branch -M main
-git push -uf origin main
+core/
+  src/main/java/io/github/cantstop/
+    backend/          # Game logic and AI implementations
+      AI_Expectiminimax/  # Expectiminimax algorithm
+      AI_MCTS/            # Monte Carlo Tree Search
+      AI_RuleBased/       # Rule-based baseline
+      Simulations/        # Testing and simulation tools
+      MatchHistory/       # Game result storage
+    frontend/         # Graphical user interface
+    results/          # Simulation results
+
+lwjgl3/              # Desktop platform launcher
+assets/              # Game assets (images, sounds, fonts)
 ```
 
-## Integrate with your tools
+## Building and Running
 
-- [ ] [Set up project integrations](https://gitlab.maastrichtuniversity.nl/project-2-1-25-26/dsai/team_10/-/settings/integrations)
+### Prerequisites
 
-## Collaborate with your team
+- Java 17 or higher
+- Gradle (wrapper included)
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+### Build the Project
 
-## Test and Deploy
+```bash
+./gradlew build
+```
 
-Use the built-in continuous integration in GitLab.
+### Run the Game
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+```bash
+./gradlew lwjgl3:run
+```
 
-***
+### Build Executable JAR
 
-# Editing this README
+```bash
+./gradlew lwjgl3:jar
+```
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+The JAR file will be located at `lwjgl3/build/libs/`.
 
-## Suggestions for a good README
+## AI Implementations
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+### Expectiminimax
 
-## Name
-Choose a self-explaining name for your project.
+A game-tree search algorithm that handles chance nodes (dice rolls) and decision nodes. Supports both fixed-depth and time-limited iterative deepening search.
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+**Key Features:**
+- Transposition table for caching
+- Alpha-beta pruning
+- Heuristic evaluation function
+- Configurable search depths
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+**Usage:**
+```bash
+java -cp "core/build/classes/java/main:lib/*" \
+  io.github.cantstop.backend.Simulations.SimulationDemoExpectiminimax \
+  [games] [rollDepth] [stopDepth] [seed] [verbose] [perMoveMillis]
+```
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+### Monte Carlo Tree Search (MCTS)
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+A probabilistic search algorithm that uses random simulations to evaluate game states.
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+**Usage:**
+```bash
+java -cp "core/build/classes/java/main:lib/*" \
+  io.github.cantstop.backend.Simulations.SimulationDemoMCTS \
+  [games] [iterations] [rolloutMaxRolls] [seed] [verbose]
+```
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+### Rule-Based
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+A simple heuristic-based player that uses basic game rules and probabilities.
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+**Usage:**
+```bash
+java -cp "core/build/classes/java/main:lib/*" \
+  io.github.cantstop.backend.Simulations.SimulationDemoRuleBased \
+  [games] [seed] [verbose]
+```
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+## Simulation Tools
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+### Interactive Terminal
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+Run head-to-head matches between different AI configurations:
+
+```bash
+java -cp "core/build/classes/java/main:lib/*" \
+  io.github.cantstop.backend.Simulations.SimulationTerminal
+```
+
+This provides an interactive interface to configure agents and run matches.
+
+### Batch Simulations
+
+Run automated simulations for testing and evaluation:
+
+```bash
+# Expectiminimax self-play
+java -cp "core/build/classes/java/main:lib/*" \
+  io.github.cantstop.backend.Simulations.SimulationDemoExpectiminimax 50 3 4
+
+# MCTS vs Rule-based
+java -cp "core/build/classes/java/main:lib/*" \
+  io.github.cantstop.backend.Simulations.SimulationTerminal
+```
+
+## Configuration
+
+### Expectiminimax Parameters
+
+- **rollDepth**: Search depth for evaluating ROLL decisions (chance nodes)
+- **stopDepth**: Search depth for evaluating STOP decisions (deterministic)
+- **Time budget**: Milliseconds per move for iterative deepening
+
+Default values: rollDepth=3, stopDepth=4, timeBudget=50ms
+
+### MCTS Parameters
+
+- **Iterations**: Number of MCTS iterations per decision
+- **Exploration constant (C)**: UCB1 exploration parameter
+- **Rollout depth**: Maximum depth for random rollouts
+
+## Development
+
+### Compile Only
+
+```bash
+./gradlew :core:compileJava
+```
+
+### Run Tests
+
+```bash
+./gradlew test
+```
+
+### Clean Build
+
+```bash
+./gradlew clean
+```
+
+## Project Details
+
+- **Language**: Java 17
+- **Framework**: libGDX
+- **Build System**: Gradle
+- **Platform**: Desktop (LWJGL3)
 
 ## License
-For open source projects, say how it is licensed.
 
-## Project status
-
+This project is part of an academic course assignment.
