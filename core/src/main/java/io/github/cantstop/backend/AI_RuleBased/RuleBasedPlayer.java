@@ -33,7 +33,7 @@ public final class RuleBasedPlayer {
                 return StopAction.INSTANCE;
             }
 
-            Move bestMove = chooseMove(state);
+            Move bestMove = chooseMove(state, diceRoll);
             return new RollAction(bestMove);
         } else {
             // No roll yet: decide between STOP and the expected value of ROLL.
@@ -53,7 +53,7 @@ public final class RuleBasedPlayer {
                 return StopAction.INSTANCE;
             }
 
-            Move bestMove = chooseMove(state);
+            Move bestMove = chooseMove(state, realRoll);
             return new RollAction(bestMove);
         }
     }
@@ -89,8 +89,7 @@ public final class RuleBasedPlayer {
     // this is a rule placeholder example just to show how it works, the rule is that if the bot didn't stop with the
     // shouldStop method, then he should play 7, if he cant then 8 or 6 or both, and if he cant then 5 or 9 all
     // the way to 2 and 12. Pretty simple rule prioritising the most common dice pairings.
-    private Move chooseMove(GameState state) {
-        DiceRoll roll = state.getLastRoll();
+    private Move chooseMove(GameState state, DiceRoll roll) {
         List<Move> legalMoves = TurnManager.getLegalMoves(state, roll);
 
         Set<Integer> availableSums = new HashSet<>();
