@@ -25,6 +25,10 @@ public record AgentSpec(
         return new AgentSpec(player, AgentType.EXPECTIMINIMAX_TIMED, seed, 0, 0, perMoveMillis, 0, 0.0, 0);
     }
 
+    public static AgentSpec timed(Player player, long seed, int perMoveMillis, int maxRollDepth, int maxStopDepth) {
+        return new AgentSpec(player, AgentType.EXPECTIMINIMAX_TIMED, seed, maxRollDepth, maxStopDepth, perMoveMillis, 0, 0.0, 0);
+    }
+
     public static AgentSpec mcts(Player player, long seed, int iterations, double explorationC, int rolloutMax) {
         return new AgentSpec(player, AgentType.MCTS, seed, 0, 0, 0, iterations, explorationC, rolloutMax);
     }
@@ -37,8 +41,14 @@ public record AgentSpec(
         return switch (type) {
             case EXPECTIMINIMAX_DEPTH ->
                 String.format("Expectiminimax(depth roll=%d, stop=%d, seed=%d)", rollDepth, stopDepth, seed);
-            case EXPECTIMINIMAX_TIMED ->
-                String.format("Expectiminimax(timed %d ms, seed=%d)", perMoveMillis, seed);
+            case EXPECTIMINIMAX_TIMED -> {
+                if (rollDepth > 0 || stopDepth > 0) {
+                    yield String.format("Expectiminimax(timed %d ms, maxRoll=%d, maxStop=%d, seed=%d)", 
+                        perMoveMillis, rollDepth, stopDepth, seed);
+                } else {
+                    yield String.format("Expectiminimax(timed %d ms, seed=%d)", perMoveMillis, seed);
+                }
+            }
             case MCTS ->
                 String.format("MCTS(iter=%d, C=%.2f, rollout=%d, seed=%d)",
                     mctsIterations, mctsExplorationC, mctsRolloutMax, seed);
@@ -60,6 +70,10 @@ public record AgentSpec(
             }
             case EXPECTIMINIMAX_TIMED -> {
                 json.append(",\n      \"perMoveMillis\": ").append(perMoveMillis);
+                if (rollDepth > 0 || stopDepth > 0) {
+                    json.append(",\n      \"maxRollDepth\": ").append(rollDepth);
+                    json.append(",\n      \"maxStopDepth\": ").append(stopDepth);
+                }
             }
             case MCTS -> {
                 json.append(",\n      \"mctsIterations\": ").append(mctsIterations);
