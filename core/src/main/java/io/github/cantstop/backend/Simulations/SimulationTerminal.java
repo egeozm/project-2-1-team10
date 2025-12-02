@@ -115,8 +115,10 @@ public final class SimulationTerminal {
             }
             case EXPECTIMINIMAX_TIMED -> {
                 ExpectiminimaxPlayer player = new ExpectiminimaxPlayer(rng);
+                int maxRoll = spec.rollDepth() > 0 ? spec.rollDepth() : Integer.MAX_VALUE;
+                int maxStop = spec.stopDepth() > 0 ? spec.stopDepth() : Integer.MAX_VALUE;
                 AgentController controller = state -> toDecision(
-                    player.chooseActionWithTime(state, null, spec.perMoveMillis())
+                    player.chooseActionWithTime(state, null, spec.perMoveMillis(), maxRoll, maxStop)
                 );
                 yield new AgentRuntime(spec, controller);
             }
@@ -237,7 +239,14 @@ public final class SimulationTerminal {
             }
             case 2 -> {
                 int perMove = promptInt("Per-move time budget (ms)", 100, 10, 5_000);
-                yield AgentSpec.timed(player, seed, perMove);
+                System.out.println("\nOptional: Set maximum depth limits (0 = no limit)");
+                int maxRollDepth = promptInt("Max roll depth (0 for unlimited)", 0, 0, 10);
+                int maxStopDepth = promptInt("Max stop depth (0 for unlimited)", 0, 0, 12);
+                if (maxRollDepth > 0 || maxStopDepth > 0) {
+                    yield AgentSpec.timed(player, seed, perMove, maxRollDepth, maxStopDepth);
+                } else {
+                    yield AgentSpec.timed(player, seed, perMove);
+                }
             }
             case 3 -> {
                 int iterations = promptInt("MCTS iterations per decision", 2_000, 100, 100_000);

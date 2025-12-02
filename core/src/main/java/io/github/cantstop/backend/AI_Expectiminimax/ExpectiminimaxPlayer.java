@@ -149,12 +149,32 @@ public final class ExpectiminimaxPlayer {
 
 
     public Action chooseActionWithTime(GameState state, DiceRoll diceRoll, long millis) {
+        return chooseActionWithTime(state, diceRoll, millis, Integer.MAX_VALUE, Integer.MAX_VALUE);
+    }
+
+    /**
+     * Time-limited iterative deepening with optional maximum depth limits.
+     * @param state Current game state
+     * @param diceRoll Current dice roll (null if not rolled yet)
+     * @param millis Time budget in milliseconds
+     * @param maxRollDepth Maximum roll depth to search (Integer.MAX_VALUE for no limit)
+     * @param maxStopDepth Maximum stop depth to search (Integer.MAX_VALUE for no limit)
+     * @return Best action found within time budget
+     */
+    public Action chooseActionWithTime(GameState state, DiceRoll diceRoll, long millis, int maxRollDepth, int maxStopDepth) {
         long deadline = System.nanoTime() + millis * 1_000_000L;
         this.searchDeadlineNanos = deadline;
         Action best = null;
+        int maxDepth = Math.max(maxRollDepth, maxStopDepth - 1);
         for (int d = 1; ; d++) {
+            // Respect max depth limits
+            if (d > maxDepth) {
+                return best != null ? best : chooseAction(state, diceRoll, maxRollDepth, maxStopDepth);
+            }
             ttEpoch++;
-            Action a = chooseAction(state, diceRoll, /*rollDepth=*/d, /*stopDepth=*/d + 1);
+            int rollDepth = Math.min(d, maxRollDepth);
+            int stopDepth = Math.min(d + 1, maxStopDepth);
+            Action a = chooseAction(state, diceRoll, rollDepth, stopDepth);
             if (System.nanoTime() >= deadline) return best != null ? best : a;
             best = a;
         }
