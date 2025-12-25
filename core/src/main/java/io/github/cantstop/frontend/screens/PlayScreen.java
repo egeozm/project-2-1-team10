@@ -2,6 +2,7 @@ package io.github.cantstop.frontend.screens;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
@@ -12,6 +13,7 @@ import com.badlogic.gdx.utils.Timer;
 
 import io.github.cantstop.frontend.*;
 import io.github.cantstop.backend.*;
+import io.github.cantstop.frontend.shaders.PostProcessor;
 
 import java.util.*;
 
@@ -38,12 +40,17 @@ public class PlayScreen implements Screen {
     private final List<TextButton> moveButtons = new ArrayList<>();
     private BitmapFont font;
 
+    private PostProcessor postProcessor;
+    private float shaderTime = 0f;
+
     private boolean gameOver = false;
 
     public PlayScreen(Main game , boolean vsAI) {
         this.game = game;
         this.vsAI = vsAI;
         gameState = GameState.initialize(Player.RED);
+
+        postProcessor = new PostProcessor(game.batch, game.viewport);
 
         font = new BitmapFont();
         font.getData().setScale(0.8f);
@@ -83,6 +90,7 @@ public class PlayScreen implements Screen {
 
     @Override
     public void show() {
+
 
         stage = new Stage(game.viewport);
         Gdx.input.setInputProcessor(stage);
@@ -159,8 +167,6 @@ public class PlayScreen implements Screen {
 
     @Override
     public void render(float delta) {
-        ScreenUtils.clear(0.1f, 0.1f, 0.15f, 1f);
-
         // ------------------------------------------------------------------------
         //  Keyboard Controls
         // ------------------------------------------------------------------------
@@ -185,19 +191,23 @@ public class PlayScreen implements Screen {
 //            game.setScreen(new MenuScreen(game));
 //        }
 
-        game.viewport.apply();
-        game.batch.setProjectionMatrix(game.viewport.getCamera().combined);
+        shaderTime += delta;
 
+//        ScreenUtils.clear(0.1f, 0.1f, 0.15f, 1f);
+
+        game.viewport.apply();
+
+        postProcessor.begin();
+
+        game.batch.setProjectionMatrix(game.viewport.getCamera().combined);
         game.batch.begin();
 
         boardRenderer.drawBoard();
         boardRenderer.drawMarkersEtc();
         boardRenderer.drawColumnNumbers();
         boardRenderer.drawCurrentPlayer();
-
         diceRenderer.update(delta);
         diceRenderer.draw();
-
         popupRenderer.update(delta);
         popupRenderer.draw();
 
@@ -205,6 +215,9 @@ public class PlayScreen implements Screen {
 
         stage.act(delta);
         stage.draw();
+
+        postProcessor.end(shaderTime, game.viewport);
+
     }
 
     @Override
@@ -229,6 +242,7 @@ public class PlayScreen implements Screen {
     public void dispose() {
         stage.dispose();
         font.dispose();
+//        postProcessor.dispose();
         if (game.assets != null) {
             game.assets.dispose();
         }

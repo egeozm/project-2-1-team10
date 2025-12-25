@@ -3,18 +3,25 @@ package io.github.cantstop.frontend;
 
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.glutils.FrameBuffer;
+import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import io.github.cantstop.frontend.screens.MenuScreen;
 import com.badlogic.gdx.audio.Music;
 import io.github.cantstop.frontend.screens.PlayScreen;
+import io.github.cantstop.frontend.shaders.PostProcessor;
 
 /** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
 public class Main extends Game {
 
     public FitViewport viewport;
     public SpriteBatch batch;
+//    public ShaderProgram shaderProgram;
+//    public FrameBuffer fbo;
+    public PostProcessor postProcessor;
     public BitmapFont font;
     public GameAssets assets;
     public Music mainMenuMusic;
@@ -26,6 +33,20 @@ public class Main extends Game {
         // use libGDX's default font
         font = new BitmapFont();
         viewport = new FitViewport(560, 320);
+
+//        //set shaders
+//        String vertexShader = Gdx.files.internal("shaders/vertex.glsl").readString();
+//        String fragmentShader = Gdx.files.internal("shaders/fragment.glsl").readString();
+//        shaderProgram = new ShaderProgram(vertexShader, fragmentShader);
+//        if (!shaderProgram.isCompiled()) {
+//            throw new IllegalStateException(shaderProgram.getLog());
+//        }
+
+        postProcessor = new PostProcessor(batch, viewport);
+//        shaderProgram.pedantic = false; // not sure what this does
+//        batch.setShader(shaderProgram);
+//
+//        fbo = new FrameBuffer(Pixmap.Format.RGBA8888, 560, 320, false);
 
         //font has 15pt, but we need to scale it to our viewport by ratio of viewport height to screen height
         font.setUseIntegerPositions(false);
@@ -74,6 +95,7 @@ public class Main extends Game {
         batch.dispose();
         font.dispose();
         screen.dispose();
+        postProcessor.dispose();
         if(mainMenuMusic != null)
             mainMenuMusic.dispose();
     }
