@@ -122,13 +122,19 @@ public final class GameState {
     public int tempAtCol(int col)     { return tempRunners[col]; }       // TEMP_NONE = none
 
     // copy of the whole state!!!
+    // copy of the whole state!!!
     public GameState copy() {
-        GameState gs = initialize(this.currentPlayer);
+        GameState gs = new GameState();
 
-        System.arraycopy(this.redMarkers,   0, gs.redMarkers,   0, GameConstants.NUM_COLS);
-        System.arraycopy(this.blueMarkers,  0, gs.blueMarkers,  0, GameConstants.NUM_COLS);
-        System.arraycopy(this.tempRunners,  0, gs.tempRunners,  0, GameConstants.NUM_COLS);
+        gs.currentPlayer = this.currentPlayer;
+        gs.turnPhase = this.turnPhase;
+        gs.lastRoll = this.lastRoll;
+
+        System.arraycopy(this.redMarkers,  0, gs.redMarkers,  0, GameConstants.NUM_COLS);
+        System.arraycopy(this.blueMarkers, 0, gs.blueMarkers, 0, GameConstants.NUM_COLS);
+        System.arraycopy(this.tempRunners, 0, gs.tempRunners, 0, GameConstants.NUM_COLS);
 
         return gs;
     }
+
 }

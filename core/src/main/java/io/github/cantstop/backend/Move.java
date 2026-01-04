@@ -22,9 +22,11 @@ public final class Move {
     public int sumB() { return sumB; }
 
     // true if both sums target the same column
+    // true if the move uses only one sum (the other is 0)
     public boolean isSingle() {
-        return sumA == sumB;
+        return sumA == 0 || sumB == 0;
     }
+
 
     // short print for simulation purposes
     @Override

@@ -283,6 +283,17 @@ public final class MCTSPlayer {
 
     private List<MctsAction> legalActionsFrom(GameState s, DiceRoll lastRoll) {
         if (s.getTurnPhase() == TurnPhase.ROLL_OR_STOP) {
+
+            int tempSum = 0;
+            for (int col = 0; col < GameConstants.NUM_COLS; col++) {
+                tempSum += s.tempAtCol(col);
+            }
+
+            // If we have no temporary progress, STOP is pointless (banking 0)
+            if (tempSum == 0) {
+                return Collections.singletonList(MctsAction.roll());
+            }
+
             return Arrays.asList(MctsAction.stop(), MctsAction.roll());
         } else {
             // CHOOSE_MOVE requires last roll from the previous ROLL

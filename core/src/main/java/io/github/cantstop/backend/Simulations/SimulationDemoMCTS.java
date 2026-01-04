@@ -15,13 +15,6 @@ import java.util.Random;
  *
  * Usage (all args optional):
  *   java io.github.cantstop.backend.Simulations.SimulationDemoMCTS [games] [iterations] [rolloutMaxRolls] [seed] [verbose]
- *
- * Examples:
- *   # 20 games, default params, random seed, quiet
- *   java io.github.cantstop.backend.Simulations.SimulationDemoMCTS 20
- *
- *   # 50 games, iterations=8000, rolloutMaxRolls=4, seed=42, verbose
- *   java io.github.cantstop.backend.Simulations.SimulationDemoMCTS 50 8000 4 42 true
  */
 public final class SimulationDemoMCTS {
 
@@ -54,15 +47,16 @@ public final class SimulationDemoMCTS {
             // In your codebase: GameState has a private constructor → use factory method
             GameState state = GameState.initialize(Player.RED);
 
+            System.out.printf("\n=========== GAME %d START ===========\n", g + 1);
+
             int actionsThisGame = playSingleGame(state, redCtrl, blueCtrl, verbose);
 
             Player winner = TurnManager.checkWinCondition(state, Player.RED) ? Player.RED : Player.BLUE;
             if (winner == Player.RED) redWins++; else blueWins++;
             totalActions += actionsThisGame;
 
-            if (!verbose) {
-                System.out.printf("Game %2d winner: %s (%d actions)\n", g + 1, winner, actionsThisGame);
-            }
+            System.out.printf("=========== GAME %d END | winner: %s (%d actions) ===========\n",
+                g + 1, winner, actionsThisGame);
         }
 
         System.out.println("=======================================");
@@ -74,9 +68,6 @@ public final class SimulationDemoMCTS {
 
     /**
      * Plays one full game until a player satisfies the win condition.
-     * Each decision is executed via MCTSController:
-     *   - In ROLL_OR_STOP: it chooses STOP or ROLL. If ROLL leads to no-bust, it also chooses a MOVE.
-     *   - In CHOOSE_MOVE: it chooses a concrete MOVE for the last dice roll.
      *
      * We count "actions" as STOPs and MOVEs applied (ROLL does not mutate the state by itself).
      *
@@ -88,27 +79,29 @@ public final class SimulationDemoMCTS {
         // Safety valve against accidental infinite loops
         final int MAX_ACTIONS_SAFETY = 4000;
 
+        long stepNo = 0; // <- NEW: counts every controller step (decision cycle)
+
         while (!TurnManager.checkWinCondition(state, Player.RED)
             && !TurnManager.checkWinCondition(state, Player.BLUE)) {
 
             Player turnOwner = state.getCurrentPlayer();
-            if (verbose) {
-                System.out.printf("\n[%s] turn starts\n", turnOwner);
-            }
+            System.out.printf("\n[%s] turn starts\n", turnOwner);
 
-            // One turn: MCTS will keep deciding STOP/ROLL and (on no-bust) a MOVE
-            // until STOP/BUST or terminal state (win), i.e., until the player changes or game ends.
+            // One turn: keep deciding until STOP/BUST or terminal (player changes or game ends)
             while (!TurnManager.checkWinCondition(state, Player.RED)
                 && !TurnManager.checkWinCondition(state, Player.BLUE)
                 && state.getCurrentPlayer() == turnOwner) {
+
+                stepNo++;
 
                 MCTSController.ExecLog log = (turnOwner == Player.RED)
                     ? redCtrl.decideAndApply(state)
                     : blueCtrl.decideAndApply(state);
 
-                if (verbose) printExecLog(turnOwner, log);
+                // ALWAYS print each step (each "ruch" w Twoim sensie)
+                printExecLog(stepNo, turnOwner, log, verbose);
 
-                // Count applied actions: STOP or MOVE. ROLL alone does not mutate the board.
+                // Count applied actions: STOP or MOVE.
                 if (log.firstAction != null && log.firstAction.isStop()) actions++;
                 if (log.chosenMove != null) actions++;
 
@@ -118,25 +111,35 @@ public final class SimulationDemoMCTS {
                 }
             }
         }
-        if (verbose) {
-            Player winner = TurnManager.checkWinCondition(state, Player.RED) ? Player.RED : Player.BLUE;
-            System.out.printf("[%s] wins!\n", winner);
-        }
+
+        Player winner = TurnManager.checkWinCondition(state, Player.RED) ? Player.RED : Player.BLUE;
+        System.out.printf("\n[%s] wins!\n", winner);
         return actions;
     }
 
     // ----------------- logging helpers -----------------
 
-    /** Pretty-prints one controller step for debugging/analysis. */
-    private static void printExecLog(Player p, MCTSController.ExecLog log) {
+    /**
+     * Pretty-prints one controller step.
+     * Prints every step always; when verbose=true adds a little extra framing.
+     */
+    private static void printExecLog(long stepNo, Player p, MCTSController.ExecLog log, boolean verbose) {
         StringBuilder sb = new StringBuilder();
+
+        // Step number
+        sb.append(String.format("#%05d ", stepNo));
+
         sb.append("[").append(p).append("] ");
+
         if (log.firstAction != null) {
             MctsAction a = log.firstAction;
             if (a.isStop()) sb.append("STOP");
             else if (a.isRoll()) sb.append("ROLL");
             else if (a.isMove()) sb.append("MOVE?");
+        } else {
+            sb.append("NO_ACTION?");
         }
+
         if (log.roll != null) {
             int[][] pairs = log.roll.pairings();
             sb.append("  roll=[")
@@ -144,12 +147,20 @@ public final class SimulationDemoMCTS {
                 .append(pairs[1][0]).append("+").append(pairs[1][1]).append(" | ")
                 .append(pairs[2][0]).append("+").append(pairs[2][1]).append("]");
         }
+
         if (log.chosenMove != null) {
             sb.append("  move=pair ").append(log.chosenMove.pairingIndex())
                 .append(" (").append(log.chosenMove.sumA()).append("+").append(log.chosenMove.sumB()).append(")");
         }
+
         if (log.bust) sb.append("  [BUST]");
         if (log.terminal) sb.append("  [TERMINAL]");
+
+        if (verbose) {
+            // Optional: show turn phase maybe (if you have it in log; if not, ignore)
+            // sb.append("  phase=").append(...);
+        }
+
         System.out.println(sb.toString());
     }
 
