@@ -123,7 +123,14 @@ public final class SimulationTerminal {
                 yield new AgentRuntime(spec, controller);
             }
             case MCTS -> {
-                MCTSPlayer player = new MCTSPlayer(rng, spec.mctsIterations(), spec.mctsExplorationC(), spec.mctsRolloutMax());
+                MCTSPlayer player = new MCTSPlayer(
+                    rng,
+                    spec.mctsIterations(),
+                    spec.mctsExplorationC(),
+                    spec.mctsRolloutMax(),
+                    spec.mctsDpwK(),
+                    spec.mctsDpwAlpha()
+                );
                 AgentController controller = new MctsAgentController(player, rng);
                 yield new AgentRuntime(spec, controller);
             }
@@ -388,6 +395,42 @@ public final class SimulationTerminal {
             return Decision.move(chosen);
         }
     }
+
+    public static MatchResult playMatchup(AgentSpec redSpec, AgentSpec blueSpec, int games, long matchSeed, boolean verbose) {
+
+        int redWins = 0;
+        int blueWins = 0;
+        long totalMoves = 0;
+        List<GameResult> gameResults = new ArrayList<>();
+
+        for (int g = 0; g < games; g++) {
+            AgentRuntime redRuntime = buildRuntime(redSpec, matchSeed, g, GOLDEN_G);
+            AgentRuntime blueRuntime = buildRuntime(blueSpec, matchSeed, g, GOLDEN_G >>> 1);
+
+            GameState state = GameState.initialize(Player.RED);
+            int actions = playSingleGame(state, redRuntime, blueRuntime, verbose);
+            totalMoves += actions;
+
+            Player winner = TurnManager.checkWinCondition(state, Player.RED) ? Player.RED : Player.BLUE;
+            if (winner == Player.RED) redWins++;
+            else blueWins++;
+
+            gameResults.add(new GameResult(g + 1, winner, actions));
+        }
+
+        return new MatchResult(
+            Instant.now().toString(),
+            matchSeed,
+            games,
+            redWins,
+            blueWins,
+            totalMoves,
+            redSpec,
+            blueSpec,
+            gameResults
+        );
+    }
+
 
 }
 

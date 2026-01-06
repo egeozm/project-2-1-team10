@@ -17,16 +17,28 @@ public final class MCTSPlayer {
     private final int maxIterations;
     private final double explorationC;
     private final int rolloutMaxRolls;
+    private Player rootPlayer;
+
+
+    // DPW defaults (backwards compatible constructor)
+    private static final double DEFAULT_DPW_K = 4.0;
+    private static final double DEFAULT_DPW_ALPHA = 0.5;
 
     // --- DPW parameters (chance nodes) ---
     // Start values (we will tune later in self-play)
-    private final double dpwK = 4.0;
-    private final double dpwAlpha = 0.5;
+    private final double dpwK;
+    private final double dpwAlpha;
 
     // outcome frequency lookup (for weighted pick among existing outcomes)
     private final Map<MctsAction, Integer> outcomeFreq = new HashMap<>();
 
+    // 4-arg constructor (compat)
     public MCTSPlayer(Random rng, int maxIterations, double explorationC, int rolloutMaxRolls) {
+        this(rng, maxIterations, explorationC, rolloutMaxRolls, DEFAULT_DPW_K, DEFAULT_DPW_ALPHA);
+    }
+
+
+    public MCTSPlayer(Random rng, int maxIterations, double explorationC, int rolloutMaxRolls, double dpwK, double dpwAlpha) {
         if (rng != null) {
             this.rng = rng;
         } else {
@@ -35,13 +47,18 @@ public final class MCTSPlayer {
         this.maxIterations = Math.max(1, maxIterations);
         this.explorationC = explorationC;
         this.rolloutMaxRolls = Math.max(1, rolloutMaxRolls);
+        this.dpwK = dpwK;
+        this.dpwAlpha = dpwAlpha;
 
         initOutcomeFreq();
     }
 
+
+
     /* Decide an action STOP ROLL or MOVE for the current phase */
     public MctsAction decide(GameState rootState) {
-        final Player rootPlayer = rootState.getCurrentPlayer();
+        this.rootPlayer = rootState.getCurrentPlayer();
+        final Player rootPlayer = this.rootPlayer;
         final List<MctsAction> rootActions = legalActionsFrom(rootState, (MctsAction) null);
         final Node root = new Node(null, Node.Type.DECISION, rootPlayer, rootActions);
 
@@ -137,22 +154,33 @@ public final class MCTSPlayer {
     }
 
     // ---------------- UCT ----------------
-
     private Node selectUCT(Node parent) {
+        double logN = Math.log(Math.max(1, parent.visits));
         Node best = null;
         double bestScore = Double.NEGATIVE_INFINITY;
-        final double lnN = Math.log(Math.max(1, parent.visits));
-        for (Node ch : parent.children.values()) {
-            double q = ch.mean();
-            double u = explorationC * Math.sqrt(lnN / Math.max(1, ch.visits));
-            double score = q + u;
+
+        boolean opponentTurn = (parent.playerToMove != this.rootPlayer);
+
+        for (Node child : parent.children.values()) {
+            // Defensive: if unvisited, take it immediately
+            if (child.visits == 0) return child;
+
+            double q = child.valueSum / child.visits; // value for ROOT player in [0,1]
+
+            // Opponent tries to minimize root's outcome -> flip for mover perspective
+            double qFromMoverPerspective = opponentTurn ? (1.0 - q) : q;
+
+            double u = explorationC * Math.sqrt(logN / child.visits);
+            double score = qFromMoverPerspective + u;
+
             if (score > bestScore) {
                 bestScore = score;
-                best = ch;
+                best = child;
             }
         }
         return best;
     }
+
 
     // ---------- Expansion ordering and ranking ----------
 
