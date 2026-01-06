@@ -4,9 +4,9 @@ import java.util.*;
 
 public final class RollBucketer {
 
-    static final class Bucket {
+    public static final class Bucket {
         // 3 pairings; each pairing encodes the ordered pair (u<=v) as u*16+v (both in 2..12)
-        final int a, b, c; // sorted nondecreasing for canonicality
+        public final int a, b, c; // sorted nondecreasing for canonicality
 
         Bucket(int x, int y, int z) {
             int[] t = {x, y, z};
@@ -28,9 +28,9 @@ public final class RollBucketer {
         }
     }
 
-    static final class Entry {
-        final Bucket bucket;
-        final int frequency; // number of 6^4 outcomes mapping to this bucket
+    public static final class Entry {
+        public final Bucket bucket;
+        public final int frequency; // number of 6^4 outcomes mapping to this bucket
 
         Entry(Bucket b, int f) {
             this.bucket = b;
@@ -38,7 +38,7 @@ public final class RollBucketer {
         }
     }
 
-    static final List<Entry> ENTRIES;
+    private static final List<Entry> ENTRIES;
 
     static {
         Map<Bucket, Integer> freq = new HashMap<>(1024);
@@ -67,4 +67,13 @@ public final class RollBucketer {
     public static int unpackV(int p) {
         return p & 0xF;
     }
+
+    public static List<Entry> entries() {
+        return Collections.unmodifiableList(ENTRIES);
+    }
+
+    public static int totalOutcomes() {
+        return 6 * 6 * 6 * 6; // 1296
+    }
+
 }

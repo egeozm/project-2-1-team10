@@ -1,6 +1,7 @@
 package io.github.cantstop.backend.AI_MCTS;
 
 import io.github.cantstop.backend.*;
+import io.github.cantstop.backend.AI_Expectiminimax.RollBucketer;
 
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
@@ -17,6 +18,14 @@ public final class MCTSPlayer {
     private final double explorationC;
     private final int rolloutMaxRolls;
 
+    // --- DPW parameters (chance nodes) ---
+    // Start values (we will tune later in self-play)
+    private final double dpwK = 4.0;
+    private final double dpwAlpha = 0.5;
+
+    // outcome frequency lookup (for weighted pick among existing outcomes)
+    private final Map<MctsAction, Integer> outcomeFreq = new HashMap<>();
+
     public MCTSPlayer(Random rng, int maxIterations, double explorationC, int rolloutMaxRolls) {
         if (rng != null) {
             this.rng = rng;
@@ -26,42 +35,92 @@ public final class MCTSPlayer {
         this.maxIterations = Math.max(1, maxIterations);
         this.explorationC = explorationC;
         this.rolloutMaxRolls = Math.max(1, rolloutMaxRolls);
+
+        initOutcomeFreq();
     }
 
     /* Decide an action STOP ROLL or MOVE for the current phase */
     public MctsAction decide(GameState rootState) {
         final Player rootPlayer = rootState.getCurrentPlayer();
-        final List<MctsAction> rootActions = legalActionsFrom(rootState, null);
-        final Node root = new Node(null, rootPlayer, rootActions);
+        final List<MctsAction> rootActions = legalActionsFrom(rootState, (MctsAction) null);
+        final Node root = new Node(null, Node.Type.DECISION, rootPlayer, rootActions);
 
         for (int it = 0; it < maxIterations; it++) {
             GameState s = rootState.copy();
             Node node = root;
-            DiceRoll lastRoll = null;
+            MctsAction lastOutcome = null;
 
-            // Selection
-            while (!node.hasUntried() && !isTerminal(s)) {
+            // Selection (handles CHANCE nodes explicitly)
+            while (!isTerminal(s)) {
+
+                // CHANCE node: DPW + sample outcome
+                if (node.type == Node.Type.CHANCE) {
+
+                    int limit = dpwLimit(node);
+
+                    // 1) propose a random outcome according to true distribution
+                    MctsAction outcome = sampleOutcomeAction();
+
+                    // 2) DPW rule: if this is a new outcome but we already reached the limit,
+                    //    reuse an existing outcome (weighted)
+                    if (!node.children.containsKey(outcome) && node.children.size() >= limit) {
+                        outcome = pickExistingOutcomeWeighted(node);
+                    }
+
+                    // 3) apply chosen outcome to the state
+                    StepResult step = applyActionInPlace(s, outcome);
+                    lastOutcome = step.lastOutcome;
+
+                    Node ch = node.children.get(outcome);
+                    if (ch == null) {
+                        // expand new outcome child -> DECISION node
+                        Node created = node.addChild(
+                            outcome,
+                            Node.Type.DECISION,
+                            s.getCurrentPlayer(),
+                            legalActionsFrom(s, lastOutcome)
+                        );
+                        node = created;
+                        break; // expanded, stop selection
+                    } else {
+                        node = ch;
+                        if (step.terminal) break;
+                        continue;
+                    }
+                }
+
+                // DECISION node: standard selection until we find a node with untried actions
+                if (node.hasUntried()) break;
+
                 node = selectUCT(node);
                 StepResult step = applyActionInPlace(s, node.actionFromParent);
-                lastRoll = step.lastRoll;
+                lastOutcome = step.lastOutcome;
+
                 if (step.terminal) break;
             }
 
-            // Expansion
-            if (!isTerminal(s) && node.hasUntried()) {
-                sortUntriedForExpansion(node.untried, s, lastRoll, rootPlayer);
+            // Expansion (DECISION node only)
+            if (!isTerminal(s) && node.type == Node.Type.DECISION && node.hasUntried()) {
+                sortUntriedForExpansion(node.untried, s, rootPlayer);
                 MctsAction a = node.popUntried();
                 StepResult step = applyActionInPlace(s, a);
-                Node child = node.addChild(a, s.getCurrentPlayer(), legalActionsFrom(s, step.lastRoll));
-                child.actionFromParent = a;
+                lastOutcome = step.lastOutcome;
+
+                Node child;
+                if (a.isRoll()) {
+                    // After deciding to ROLL, we go to a CHANCE node (no direct game-state change here)
+                    child = node.addChild(a, Node.Type.CHANCE, s.getCurrentPlayer(), Collections.emptyList());
+                } else {
+                    // STOP or MOVE -> normal DECISION node
+                    child = node.addChild(a, Node.Type.DECISION, s.getCurrentPlayer(), legalActionsFrom(s, lastOutcome));
+                }
+                node = child;
 
                 if (step.terminal) {
                     double reward = winnerIs(s, rootPlayer) ? 1.0 : 0.0;
-                    backpropagate(child, reward);
+                    backpropagate(node, reward);
                     continue;
                 }
-                node = child;
-                lastRoll = step.lastRoll;
             }
 
             // Simulation or terminal reached during selection
@@ -97,7 +156,7 @@ public final class MCTSPlayer {
 
     // ---------- Expansion ordering and ranking ----------
 
-    private void sortUntriedForExpansion(List<MctsAction> untried, GameState s, DiceRoll lastRoll, Player root) {
+    private void sortUntriedForExpansion(List<MctsAction> untried, GameState s, Player root) {
         untried.sort((a, b) -> {
             int ra = rankMoveHeuristic(a, s);
             int rb = rankMoveHeuristic(b, s);
@@ -281,6 +340,90 @@ public final class MCTSPlayer {
 
     // ---------------- Game helpers ----------------
 
+    private void initOutcomeFreq() {
+        outcomeFreq.clear();
+        for (RollBucketer.Entry e : RollBucketer.entries()) {
+            RollBucketer.Bucket b = e.bucket;
+            MctsAction a = MctsAction.outcome(b.a, b.b, b.c);
+            outcomeFreq.put(a, e.frequency);
+        }
+    }
+
+    private int dpwLimit(Node chanceNode) {
+        // m(n) = ceil( K * N(n)^alpha )
+        int n = Math.max(1, chanceNode.visits);
+        int m = (int) Math.ceil(dpwK * Math.pow(n, dpwAlpha));
+        return Math.max(1, m);
+    }
+
+    private MctsAction pickExistingOutcomeWeighted(Node chanceNode) {
+        if (chanceNode.children.isEmpty()) {
+            return sampleOutcomeAction();
+        }
+
+        int total = 0;
+        for (MctsAction a : chanceNode.children.keySet()) {
+            total += outcomeFreq.getOrDefault(a, 1);
+        }
+
+        int r = rng.nextInt(Math.max(1, total));
+        int acc = 0;
+        for (MctsAction a : chanceNode.children.keySet()) {
+            acc += outcomeFreq.getOrDefault(a, 1);
+            if (r < acc) return a;
+        }
+
+        // fallback
+        return chanceNode.children.keySet().iterator().next();
+    }
+
+    private MctsAction sampleOutcomeAction() {
+        // Weighted by frequency (total = 1296)
+        int r = rng.nextInt(RollBucketer.totalOutcomes());
+        int acc = 0;
+        for (RollBucketer.Entry e : RollBucketer.entries()) {
+            acc += e.frequency;
+            if (r < acc) {
+                RollBucketer.Bucket b = e.bucket;
+                return MctsAction.outcome(b.a, b.b, b.c);
+            }
+        }
+        // Fallback (should never happen)
+        RollBucketer.Entry e = RollBucketer.entries().get(0);
+        RollBucketer.Bucket b = e.bucket;
+        return MctsAction.outcome(b.a, b.b, b.c);
+    }
+
+    // Tree version (no DiceRoll in nodes)
+    private List<MctsAction> legalActionsFrom(GameState s, MctsAction lastOutcome) {
+        if (s.getTurnPhase() == TurnPhase.ROLL_OR_STOP) {
+
+            int tempSum = 0;
+            for (int col = 0; col < GameConstants.NUM_COLS; col++) {
+                tempSum += s.tempAtCol(col);
+            }
+
+            // If we have no temporary progress, STOP is pointless (banking 0)
+            if (tempSum == 0) {
+                return Collections.singletonList(MctsAction.roll());
+            }
+
+            return Arrays.asList(MctsAction.stop(), MctsAction.roll());
+        } else {
+            // CHOOSE_MOVE requires last outcome from the previous OUTCOME
+            if (lastOutcome == null || !lastOutcome.isOutcome()) {
+                return Collections.emptyList();
+            }
+            List<Move> moves = TurnManager.getLegalMovesFromPairings(
+                s, lastOutcome.packedA, lastOutcome.packedB, lastOutcome.packedC
+            );
+            List<MctsAction> out = new ArrayList<>(moves.size());
+            for (Move m : moves) out.add(MctsAction.move(m));
+            return out;
+        }
+    }
+
+    // GUI/known-roll version (keeps DiceRoll)
     private List<MctsAction> legalActionsFrom(GameState s, DiceRoll lastRoll) {
         if (s.getTurnPhase() == TurnPhase.ROLL_OR_STOP) {
 
@@ -316,6 +459,7 @@ public final class MCTSPlayer {
         return TurnManager.checkWinCondition(s, p);
     }
 
+    // Tree apply (ROLL does NOT roll; OUTCOME does bust/noBust)
     private StepResult applyActionInPlace(GameState s, MctsAction a) {
         switch (a.kind) {
             case STOP -> {
@@ -323,14 +467,19 @@ public final class MCTSPlayer {
                 return new StepResult(isTerminal(s), null);
             }
             case ROLL -> {
-                DiceRoll dr = TurnManager.roll(s, rng);
-                List<Move> legal = TurnManager.getLegalMoves(s, dr);
+                // IMPORTANT: ROLL no longer samples dice here.
+                // The random outcome is handled by an OUTCOME action from a CHANCE node.
+                return new StepResult(isTerminal(s), null);
+            }
+            case OUTCOME -> {
+                // Apply a sampled dice outcome represented as (packedA,packedB,packedC)
+                List<Move> legal = TurnManager.getLegalMovesFromPairings(s, a.packedA, a.packedB, a.packedC);
                 if (legal.isEmpty()) {
                     TurnManager.bust(s);
                     return new StepResult(isTerminal(s), null);
                 } else {
-                    TurnManager.noBust(s);          // transition to CHOOSE_MOVE
-                    return new StepResult(isTerminal(s), dr);
+                    TurnManager.noBust(s); // -> CHOOSE_MOVE
+                    return new StepResult(isTerminal(s), a); // pass outcome forward
                 }
             }
             case MOVE -> {
@@ -343,8 +492,47 @@ public final class MCTSPlayer {
 
     private static final class StepResult {
         final boolean terminal;
+        final MctsAction lastOutcome; // non-null only after OUTCOME with no bust
+        StepResult(boolean terminal, MctsAction lastOutcome) {
+            this.terminal = terminal;
+            this.lastOutcome = lastOutcome;
+        }
+    }
+
+    // Known-roll apply (ROLL DOES roll; OUTCOME is unused here)
+    private StepResultRoll applyActionInPlaceWithRoll(GameState s, MctsAction a) {
+        switch (a.kind) {
+            case STOP -> {
+                TurnManager.stop(s);
+                return new StepResultRoll(isTerminal(s), null);
+            }
+            case ROLL -> {
+                DiceRoll dr = TurnManager.roll(s, rng);
+                List<Move> legal = TurnManager.getLegalMoves(s, dr);
+                if (legal.isEmpty()) {
+                    TurnManager.bust(s);
+                    return new StepResultRoll(isTerminal(s), null);
+                } else {
+                    TurnManager.noBust(s);
+                    return new StepResultRoll(isTerminal(s), dr);
+                }
+            }
+            case MOVE -> {
+                TurnManager.applyMove(s, a.move);
+                return new StepResultRoll(isTerminal(s), null);
+            }
+            case OUTCOME -> {
+                // Not used in this mode
+                return new StepResultRoll(isTerminal(s), null);
+            }
+        }
+        throw new IllegalStateException("Unknown action kind: " + a.kind);
+    }
+
+    private static final class StepResultRoll {
+        final boolean terminal;
         final DiceRoll lastRoll; // non null only after ROLL with no bust
-        StepResult(boolean terminal, DiceRoll lastRoll) {
+        StepResultRoll(boolean terminal, DiceRoll lastRoll) {
             this.terminal = terminal;
             this.lastRoll = lastRoll;
         }
@@ -362,7 +550,7 @@ public final class MCTSPlayer {
 
         // Root starts with MOVE actions for the given last roll
         final List<MctsAction> rootActions = legalActionsFrom(rootState, lastRoll);
-        final Node root = new Node(null, rootPlayer, rootActions);
+        final Node root = new Node(null, Node.Type.DECISION, rootPlayer, rootActions);
 
         for (int it = 0; it < maxIterations; it++) {
             GameState s = rootState.copy();
@@ -372,17 +560,19 @@ public final class MCTSPlayer {
             // Selection
             while (!node.hasUntried() && !isTerminal(s)) {
                 node = selectUCT(node);
-                StepResult step = applyActionInPlace(s, node.actionFromParent);
+                StepResultRoll step = applyActionInPlaceWithRoll(s, node.actionFromParent);
                 lr = step.lastRoll;
                 if (step.terminal) break;
             }
 
             // Expansion
             if (!isTerminal(s) && node.hasUntried()) {
-                sortUntriedForExpansion(node.untried, s, lr, rootPlayer);
+                sortUntriedForExpansion(node.untried, s, rootPlayer);
                 MctsAction a = node.popUntried();
-                StepResult step = applyActionInPlace(s, a);
-                Node child = node.addChild(a, s.getCurrentPlayer(), legalActionsFrom(s, step.lastRoll));
+                StepResultRoll step = applyActionInPlaceWithRoll(s, a);
+
+                Node child = node.addChild(a, Node.Type.DECISION, s.getCurrentPlayer(),
+                    legalActionsFrom(s, step.lastRoll));
                 child.actionFromParent = a;
 
                 if (step.terminal) {

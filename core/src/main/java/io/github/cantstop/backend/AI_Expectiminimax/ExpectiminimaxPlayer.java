@@ -47,7 +47,7 @@ public final class ExpectiminimaxPlayer {
     // Max near wins: TO_WIN (3)
     // Max locks: TO_WIN (3)
     // Maximum heuristic difference (one player has everything, opponent has nothing):
-    private static final double MAX_HEURISTIC_VALUE = 
+    private static final double MAX_HEURISTIC_VALUE =
         W_PROGRESS * GameConstants.NUM_COLS +  // max progress difference
         W_TEMPO * GameConstants.MAX_TEMP_RUNNERS +  // max tempo difference
         W_NEARWIN * GameConstants.TO_WIN +  // max near win difference
@@ -394,7 +394,7 @@ public final class ExpectiminimaxPlayer {
         double weighted = 0.0;
         int total = 0;
 
-        for (var e : RollBucketer.ENTRIES) {
+        for (var e : RollBucketer.entries()) {
             // Time guard
             if ((total & 63) == 0 && System.nanoTime() >= searchDeadlineNanos) {
                 // Heuristic should be from the perspective of the root player
@@ -485,9 +485,9 @@ public final class ExpectiminimaxPlayer {
         int extraRunners = Math.max(0, activeAfter - activeBefore);
 
         // Use consistent weights derived from heuristic weights
-        return MOVE_SCORE_WIN * completesThird + 
-               MOVE_SCORE_LOCK * deltaLocks + 
-               MOVE_SCORE_NEAR * deltaNear - 
+        return MOVE_SCORE_WIN * completesThird +
+               MOVE_SCORE_LOCK * deltaLocks +
+               MOVE_SCORE_NEAR * deltaNear -
                MOVE_SCORE_RUNNER_PENALTY * extraRunners;
     }
 

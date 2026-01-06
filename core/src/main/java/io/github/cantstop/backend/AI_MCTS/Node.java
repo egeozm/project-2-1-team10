@@ -20,6 +20,9 @@ import java.util.*;
  */
 public final class Node {
 
+    public enum Type { DECISION, CHANCE }
+    public final Type type;
+
     /* Parent in the search tree or null for the root */
     public final Node parent;
 
@@ -47,8 +50,9 @@ public final class Node {
      * playerToMove     player who moves in this node
      * untriedActions   legal actions available here may be empty
      */
-    public Node(Node parent, Player playerToMove, Collection<MctsAction> untriedActions) {
+    public Node(Node parent, Type type, Player playerToMove, Collection<MctsAction> untriedActions) {
         this.parent = parent;
+        this.type = type;
         this.playerToMove = playerToMove;
         if (untriedActions != null) this.untried.addAll(untriedActions);
     }
@@ -75,8 +79,8 @@ public final class Node {
      * childUntried         initial frontier of the child with legal actions there
      * returns              the created child node
      */
-    public Node addChild(MctsAction a, Player childPlayerToMove, Collection<MctsAction> childUntried) {
-        Node ch = new Node(this, childPlayerToMove, childUntried);
+    public Node addChild(MctsAction a, Type childType, Player childPlayerToMove, Collection<MctsAction> childUntried) {
+        Node ch = new Node(this, childType, childPlayerToMove, childUntried);
         ch.actionFromParent = a;
         children.put(a, ch);
         return ch;
@@ -96,7 +100,8 @@ public final class Node {
 
     @Override
     public String toString() {
-        return "Node{player=" + playerToMove
+        return "Node{type=" + type
+            + ", player=" + playerToMove
             + ", N=" + visits
             + ", Q=" + String.format(java.util.Locale.ROOT, "%.4f", mean())
             + ", untried=" + untried.size()
