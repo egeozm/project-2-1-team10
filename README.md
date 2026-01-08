@@ -74,7 +74,7 @@ A game-tree search algorithm that handles chance nodes (dice rolls) and decision
 **Usage:**
 ```bash
 java -cp "core/build/classes/java/main:lib/*" \
-  io.github.cantstop.backend.Simulations.SimulationDemoExpectiminimax \
+  io.github.cantstop.model.Simulations.SimulationDemoExpectiminimax \
   [games] [rollDepth] [stopDepth] [seed] [verbose] [perMoveMillis]
 ```
 
@@ -85,7 +85,7 @@ A probabilistic search algorithm that uses random simulations to evaluate game s
 **Usage:**
 ```bash
 java -cp "core/build/classes/java/main:lib/*" \
-  io.github.cantstop.backend.Simulations.SimulationDemoMCTS \
+  io.github.cantstop.model.Simulations.SimulationDemoMCTS \
   [games] [iterations] [rolloutMaxRolls] [seed] [verbose]
 ```
 
@@ -96,7 +96,7 @@ A simple heuristic-based player that uses basic game rules and probabilities.
 **Usage:**
 ```bash
 java -cp "core/build/classes/java/main:lib/*" \
-  io.github.cantstop.backend.Simulations.SimulationDemoRuleBased \
+  io.github.cantstop.model.Simulations.SimulationDemoRuleBased \
   [games] [seed] [verbose]
 ```
 
@@ -108,7 +108,7 @@ Run head-to-head matches between different AI configurations:
 
 ```bash
 java -cp "core/build/classes/java/main:lib/*" \
-  io.github.cantstop.backend.Simulations.SimulationTerminal
+  io.github.cantstop.model.Simulations.SimulationTerminal
 ```
 
 This provides an interactive interface to configure agents and run matches.
@@ -120,11 +120,11 @@ Run automated simulations for testing and evaluation:
 ```bash
 # Expectiminimax self-play
 java -cp "core/build/classes/java/main:lib/*" \
-  io.github.cantstop.backend.Simulations.SimulationDemoExpectiminimax 50 3 4
+  io.github.cantstop.model.Simulations.SimulationDemoExpectiminimax 50 3 4
 
 # MCTS vs Rule-based
 java -cp "core/build/classes/java/main:lib/*" \
-  io.github.cantstop.backend.Simulations.SimulationTerminal
+  io.github.cantstop.model.Simulations.SimulationTerminal
 ```
 
 ## Configuration
