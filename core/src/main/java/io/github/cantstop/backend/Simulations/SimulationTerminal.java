@@ -123,17 +123,22 @@ public final class SimulationTerminal {
                 yield new AgentRuntime(spec, controller);
             }
             case MCTS -> {
-                MCTSPlayer player = new MCTSPlayer(
-                    rng,
+                long timeBudgetMs = 200L;
+
+                MCTSPlayer player = new MCTSPlayer(rng,
                     spec.mctsIterations(),
                     spec.mctsExplorationC(),
                     spec.mctsRolloutMax(),
                     spec.mctsDpwK(),
-                    spec.mctsDpwAlpha()
+                    spec.mctsDpwAlpha(),
+                    spec.mctsTimeBudgetMs()
                 );
+
+
                 AgentController controller = new MctsAgentController(player, rng);
                 yield new AgentRuntime(spec, controller);
             }
+
             case RULE_BASED -> {
                 RuleBasedPlayer player = new RuleBasedPlayer(rng, 9f);
                 AgentController controller = state -> toDecision(player.chooseAction(state, null));

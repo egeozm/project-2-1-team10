@@ -1,17 +1,19 @@
 package io.github.cantstop.backend.AI_MCTS;
 
 public record MctsConfig(
-    int iterations,
-    int rolloutMaxRolls,
-    double c,
-    double dpwK,
-    double dpwAlpha
+    int maxIterations,     // safety cap
+    long timeBudgetMs,     // e.g. 200
+    int rolloutMaxRolls,   // dr
+    double c,              // exploration
+    double dpwK,           // C2 analogue
+    double dpwAlpha        // alpha
 ) {
     @Override
     public String toString() {
         return "MctsConfig{" +
-            "iter=" + iterations +
-            ", dr=" + rolloutMaxRolls +
+            "iters=" + maxIterations +
+            ", t=" + timeBudgetMs +
+            "ms, dr=" + rolloutMaxRolls +
             ", c=" + c +
             ", dpwK=" + dpwK +
             ", dpwAlpha=" + dpwAlpha +
