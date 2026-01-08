@@ -103,7 +103,7 @@ public final class ExpectiminimaxPlayer {
             if (legal.isEmpty()) {
                 // No legal move → bust. The engine should handle bust when it sees there
                 // are no moves for this roll; we just signal "end of turn".
-                return StopAction.INSTANCE;
+                return new RollAction(null);
             }
 
             Move bestMove = bestMoveForRoll(state, diceRoll, rollDepth);
@@ -114,7 +114,7 @@ public final class ExpectiminimaxPlayer {
             double rollScore = expectedValueRoll(state, rollDepth, true); // current player is maximizing
 
             if (stopScore + EPS >= rollScore) {
-                return StopAction.INSTANCE;
+                return new RollAction(null);
             }
 
             // We chose to roll; now actually roll and pick the move for that real outcome
@@ -581,10 +581,10 @@ public final class ExpectiminimaxPlayer {
     }
 
     public static final class RollAction implements Action {
-        private final Move move;
+        private final Move move; // null => BUST
 
         public RollAction(Move move) {
-            this.move = Objects.requireNonNull(move);
+            this.move = move; // allow null to signal bust
         }
 
         public Move move() {
@@ -593,7 +593,8 @@ public final class ExpectiminimaxPlayer {
 
         @Override
         public String toString() {
-            return "RollAction{" + move + "}";
+            return (move == null) ? "RollAction{BUST}" : ("RollAction{" + move + "}");
         }
     }
+
 }

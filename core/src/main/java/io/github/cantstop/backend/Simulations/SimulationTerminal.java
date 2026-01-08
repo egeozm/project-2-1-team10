@@ -169,7 +169,7 @@ public final class SimulationTerminal {
                                       AgentRuntime red,
                                       AgentRuntime blue,
                                       boolean verbose) {
-        final int MAX_ACTIONS = 300;
+        final int MAX_ACTIONS = 4000;
         int actions = 0;
 
         while (!TurnManager.checkWinCondition(state, Player.RED)
@@ -219,9 +219,9 @@ public final class SimulationTerminal {
     }
 
     private static boolean applyOrBust(GameState state, Move move, boolean verbose) {
-        boolean valid = move != null;
-        if (!valid) {
-            if (verbose) System.out.println("Encountered illegal move; counting as BUST.");
+
+        if (move == null) {
+            if (verbose) System.out.println("BUST (no legal moves).");
             TurnManager.bust(state);
             return false;
         }
@@ -261,11 +261,17 @@ public final class SimulationTerminal {
                 }
             }
             case 3 -> {
-                int iterations = promptInt("MCTS iterations per decision", 2_000, 100, 100_000);
-                double exploration = promptDouble("Exploration constant (C)", 1.414, 0.1, 5.0);
-                int rollout = promptInt("Rollout max rolls", 8, 1, 50);
-                yield AgentSpec.mcts(player, seed, iterations, exploration, rollout);
+                int iterations = promptInt("MCTS iterations per decision", 2_000, 100, 1_000_000);
+                double exploration = promptDouble("Exploration constant (C)", 0.35, 0.1, 5.0);
+                int rollout = promptInt("Rollout max rolls", 10, 1, 50);
+
+                double dpwK = promptDouble("DPW k", 25.0, 0.1, 1000.0);
+                double dpwA = promptDouble("DPW alpha", 0.5, 0.0, 1.0);
+                long timeMs = promptLong("Time budget per decision (ms, 0 = iterations only)", 200);
+
+                yield AgentSpec.mcts(player, seed, iterations, exploration, rollout, dpwK, dpwA, timeMs);
             }
+
             case 4 -> AgentSpec.ruleBased(player, seed);
             default -> throw new IllegalStateException("Unexpected value: " + choice);
         };
