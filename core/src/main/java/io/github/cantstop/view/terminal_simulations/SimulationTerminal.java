@@ -68,9 +68,8 @@ public final class SimulationTerminal {
             IPlayerController red = buildController(redSpec, matchSeed, g, GOLDEN_G);
             IPlayerController blue = buildController(blueSpec, matchSeed, g, GOLDEN_G >>> 1);
 
-            // Match RNG used by the engine for real dice rolls (reproducible per match+game).
+            // IMPORTANT: GameController needs RNG for real dice rolls.
             Random matchRng = new Random(matchSeed ^ (GOLDEN_G * (g + 1L)));
-
             GameController engine = new GameController(state, red, blue, matchRng);
 
             int actions = playSingleGame(state, engine, verbose);
@@ -138,7 +137,6 @@ public final class SimulationTerminal {
             a.apply(state);
             actions++;
 
-            // If HumanController ever gets plugged in, engine may return WaitForInputAction.
             if (a instanceof WaitForInputAction) {
                 System.out.println("Waiting for human input (not supported here). Stopping.");
                 break;
@@ -203,8 +201,8 @@ public final class SimulationTerminal {
         @Override
         public Boolean rollOrStop(GameState state) {
             MctsAction a = mcts.decide(state);
-            if (a == null) return true;      // default: roll
-            return a.isRoll();               // true=roll, false=stop
+            if (a == null) return true; // default roll
+            return a.isRoll();
         }
 
         @Override
@@ -212,7 +210,7 @@ public final class SimulationTerminal {
             if (legalMoves == null || legalMoves.isEmpty()) return null;
 
             DiceRoll lr = state.getLastRoll();
-            MctsAction a = (state.getTurnPhase() == TurnPhase.CHOOSE_MOVE && lr != null)
+            MctsAction a = (state.getTurnPhase() == io.github.cantstop.model.TurnPhase.CHOOSE_MOVE && lr != null)
                 ? mcts.decide(state, lr)
                 : mcts.decide(state);
 
@@ -221,9 +219,7 @@ public final class SimulationTerminal {
         }
     }
 
-    /**
-     * Adapts ExpectiminimaxPlayer (its own Action type) to IPlayerController.
-     */
+    /** Adapts ExpectiminimaxPlayer to IPlayerController. */
     private static final class ExpectiminimaxControllerAdapter implements IPlayerController {
         private final ExpectiminimaxPlayer expecti;
         private final int rollDepth;
@@ -251,7 +247,7 @@ public final class SimulationTerminal {
                 ? expecti.chooseActionWithTime(state, null, perMoveMs, maxOrInf(rollDepth), maxOrInf(stopDepth))
                 : expecti.chooseAction(state, null, rollDepth, stopDepth);
 
-            return !(a instanceof ExpectiminimaxPlayer.StopAction); // RollAction => roll
+            return !(a instanceof ExpectiminimaxPlayer.StopAction);
         }
 
         @Override

@@ -148,14 +148,18 @@ public final class MCTSPlayer {
 
 
     private boolean pushesActive(GameState s, Move mv) {
+        Player p = s.getCurrentPlayer();
         int[] sums = { mv.sumA(), mv.sumB() };
         for (int sum : sums) {
             if (sum <= 0) continue;
             int col = GameConstants.sumToColumnID(sum);
-            if (s.tempAtCol(col) > 0) return true;
+
+            // tempAtCol is absolute height; we need gain this turn
+            if (tempGainThisTurn(s, col, p) > 0) return true;
         }
         return false;
     }
+
 
     private boolean prefersFrequent(Move mv) {
         int a = mv.sumA();
@@ -220,13 +224,15 @@ public final class MCTSPlayer {
         int gain = 0;
 
         for (int col = 0; col < GameConstants.NUM_COLS; col++) {
-            if (s.tempAtCol(col) > 0) {
+            int g = tempGainThisTurn(s, col, p);
+            if (g > 0) {
                 active++;
-                gain += tempGainThisTurn(s, col, p);   // <- zamiast sumować ABS wysokości
+                gain += g;
             }
         }
 
-        // progi na start (potem można stroić)
+
+
         if (active >= 3 && gain >= 5) return true;
         if (active >= 2 && gain >= 6) return true;
         return false;
