@@ -1,8 +1,9 @@
-package io.github.cantstop.backend.Simulations;
+package io.github.cantstop.view.terminal_simulations;
 
-import io.github.cantstop.backend.MatchHistory.AgentSpec;
-import io.github.cantstop.backend.MatchHistory.MatchResult;
-import io.github.cantstop.backend.Player;
+import io.github.cantstop.model.Player;
+import io.github.cantstop.model.match_history.AgentSpec;
+import io.github.cantstop.model.match_history.MatchResult;
+
 
 public final class SimulationBestVsBaselines {
 

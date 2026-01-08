@@ -32,7 +32,7 @@ public final class MCTSPlayer {
     public MctsAction decide(GameState rootState) {
         final Player rootPlayer = rootState.getCurrentPlayer();
         final List<MctsAction> rootActions = legalActionsFrom(rootState, null);
-        final Node root = new Node(null, rootPlayer, rootActions);
+        final Node root = new Node(null, Node.Type.DECISION, rootPlayer, rootActions);
 
         for (int it = 0; it < maxIterations; it++) {
             GameState s = rootState.copy();
@@ -52,7 +52,7 @@ public final class MCTSPlayer {
                 sortUntriedForExpansion(node.untried, s, lastRoll, rootPlayer);
                 MctsAction a = node.popUntried();
                 StepResult step = applyActionInPlace(s, a);
-                Node child = node.addChild(a, s.getCurrentPlayer(), legalActionsFrom(s, step.lastRoll));
+                Node child = node.addChild(a, Node.Type.DECISION, s.getCurrentPlayer(), legalActionsFrom(s, step.lastRoll));
                 child.actionFromParent = a;
 
                 if (step.terminal) {
@@ -351,7 +351,7 @@ public final class MCTSPlayer {
 
         // Root starts with MOVE actions for the given last roll
         final List<MctsAction> rootActions = legalActionsFrom(rootState, lastRoll);
-        final Node root = new Node(null, rootPlayer, rootActions);
+        final Node root = new Node(null, Node.Type.DECISION, rootPlayer, rootActions);
 
         for (int it = 0; it < maxIterations; it++) {
             GameState s = rootState.copy();
@@ -371,7 +371,7 @@ public final class MCTSPlayer {
                 sortUntriedForExpansion(node.untried, s, lr, rootPlayer);
                 MctsAction a = node.popUntried();
                 StepResult step = applyActionInPlace(s, a);
-                Node child = node.addChild(a, s.getCurrentPlayer(), legalActionsFrom(s, step.lastRoll));
+                Node child = node.addChild(a, Node.Type.DECISION, s.getCurrentPlayer(), legalActionsFrom(s, step.lastRoll));
                 child.actionFromParent = a;
 
                 if (step.terminal) {
