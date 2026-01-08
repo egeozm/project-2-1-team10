@@ -68,7 +68,10 @@ public final class SimulationTerminal {
             IPlayerController red = buildController(redSpec, matchSeed, g, GOLDEN_G);
             IPlayerController blue = buildController(blueSpec, matchSeed, g, GOLDEN_G >>> 1);
 
-            GameController engine = new GameController(state, red, blue);
+            // Match RNG used by the engine for real dice rolls (reproducible per match+game).
+            Random matchRng = new Random(matchSeed ^ (GOLDEN_G * (g + 1L)));
+
+            GameController engine = new GameController(state, red, blue, matchRng);
 
             int actions = playSingleGame(state, engine, verbose);
             totalActions += actions;
@@ -220,8 +223,6 @@ public final class SimulationTerminal {
 
     /**
      * Adapts ExpectiminimaxPlayer (its own Action type) to IPlayerController.
-     * rollOrStop: expectiminimax called with roll=null -> it compares STOP vs expected ROLL
-     * selectMove : called with real roll from state.getLastRoll()
      */
     private static final class ExpectiminimaxControllerAdapter implements IPlayerController {
         private final ExpectiminimaxPlayer expecti;
@@ -308,8 +309,6 @@ public final class SimulationTerminal {
                 int iterations = promptInt("MCTS iterations per decision", 20_000, 100, 2_000_000);
                 double exploration = promptDouble("Exploration constant (C)", 1.414, 0.1, 5.0);
                 int rollout = promptInt("Rollout max rolls", 10, 1, 50);
-
-                // UWAGA: DPW/timeBudget są w AgentSpec, ale ten MCTSPlayer constructor ich nie używa.
                 yield AgentSpec.mcts(player, seed, iterations, exploration, rollout);
             }
             case 4 -> AgentSpec.ruleBased(player, seed);
@@ -406,7 +405,8 @@ public final class SimulationTerminal {
             IPlayerController red = buildController(redSpec, matchSeed, g, GOLDEN_G);
             IPlayerController blue = buildController(blueSpec, matchSeed, g, GOLDEN_G >>> 1);
 
-            GameController engine = new GameController(state, red, blue);
+            Random matchRng = new Random(matchSeed ^ (GOLDEN_G * (g + 1L)));
+            GameController engine = new GameController(state, red, blue, matchRng);
 
             int actions = playSingleGame(state, engine, verbose);
             totalActions += actions;
@@ -429,5 +429,4 @@ public final class SimulationTerminal {
             gameResults
         );
     }
-
 }

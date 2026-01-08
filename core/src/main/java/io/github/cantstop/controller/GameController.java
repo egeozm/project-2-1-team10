@@ -11,13 +11,15 @@ public class GameController {
     private IPlayerController playerRed;
     private IPlayerController playerBlue;
 
-    private final Random rng = new Random(); // this should probably be moved to gameState
+    private final Random rng;
 
-    public GameController(GameState gameState, IPlayerController playerRed, IPlayerController playerBlue) {
+    public GameController(GameState gameState, IPlayerController playerRed, IPlayerController playerBlue, Random rng) {
         this.gameState = gameState;
         this.playerRed = playerRed;
         this.playerBlue = playerBlue;
+        this.rng = (rng != null) ? rng : new Random();
     }
+
 
     public Action update() {
 

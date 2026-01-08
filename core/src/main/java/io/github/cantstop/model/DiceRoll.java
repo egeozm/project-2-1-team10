@@ -53,4 +53,10 @@ public final class DiceRoll {
 
         return p;
     }
+
+    @Override
+    public String toString() {
+        return java.util.Arrays.toString(dice);
+    }
+
 }

@@ -61,7 +61,9 @@ public class PlayScreen implements Screen {
         humanController = new HumanController();
         playerBlue = humanController;
         playerRed = (vsAI) ? new RuleBasedPlayer(rng, 9f) : humanController;
-        controller = new GameController(gameState, playerRed, playerBlue);
+
+        // IMPORTANT: pass rng to GameController
+        controller = new GameController(gameState, playerRed, playerBlue, rng);
 
         // initialize frontend
         font = new BitmapFont();
@@ -238,29 +240,6 @@ public class PlayScreen implements Screen {
 
     @Override
     public void render(float delta) {
-        // ------------------------------------------------------------------------
-        //  Keyboard Controls
-        // ------------------------------------------------------------------------
-
-//        // SPACE = ROLL
-//        if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.SPACE)) {
-//            if (!gameOver && gameState.getTurnPhase() == TurnPhase.ROLL_OR_STOP && !rolling) {
-//                startDiceAnimation();
-//            }
-//        }
-//
-//        // ENTER = STOP
-//        if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.ENTER)) {
-//            if (!gameOver && gameState.getTurnPhase() == TurnPhase.ROLL_OR_STOP
-//                && gameState.countActiveColumns() > 0 && !rolling) {
-//                handleStop();
-//            }
-//        }
-//
-//        // ESC = MENU
-//        if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.ESCAPE)) {
-//            game.setScreen(new MenuScreen(game));
-//        }
 
         shaderTime += delta;
 

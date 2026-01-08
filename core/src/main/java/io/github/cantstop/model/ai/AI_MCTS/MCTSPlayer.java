@@ -128,21 +128,24 @@ public final class MCTSPlayer {
     }
 
     private boolean closesColumn(GameState s, Move mv) {
-        // applyMove semantics in your code
-        // if sumA greater than zero advanceOne sumA and same for sumB
-        // closing when perm plus temp plus one reaches or exceeds max height
+        Player p = s.getCurrentPlayer();
         int[] sums = { mv.sumA(), mv.sumB() };
+
         for (int sum : sums) {
             if (sum <= 0) continue;
+
             int col  = GameConstants.sumToColumnID(sum);
+            if (s.isColumnLocked(col)) continue;
+
             int maxH = GameConstants.maxHeight(sum);
-            int perm = s.getMarkerHeight(s.getCurrentPlayer(), col);
-            int temp = s.tempAtCol(col);
-            int next = perm + temp + 1;
+            int cur  = currentHeight(s, col, p);
+            int next = Math.min(cur + 1, maxH);
+
             if (next >= maxH) return true;
         }
         return false;
     }
+
 
     private boolean pushesActive(GameState s, Move mv) {
         int[] sums = { mv.sumA(), mv.sumB() };
@@ -211,19 +214,24 @@ public final class MCTSPlayer {
     // –– rollout policies ––
 
     private boolean policyShouldStop(GameState s) {
+        Player p = s.getCurrentPlayer();
+
         int active = 0;
-        int tempSum = 0;
+        int gain = 0;
+
         for (int col = 0; col < GameConstants.NUM_COLS; col++) {
-            int t = s.tempAtCol(col);
-            if (t > 0) {
+            if (s.tempAtCol(col) > 0) {
                 active++;
-                tempSum += t;
+                gain += tempGainThisTurn(s, col, p);   // <- zamiast sumować ABS wysokości
             }
         }
-        if (active >= 3 && tempSum >= 5) return true;
-        if (active >= 2 && tempSum >= 6) return true;
+
+        // progi na start (potem można stroić)
+        if (active >= 3 && gain >= 5) return true;
+        if (active >= 2 && gain >= 6) return true;
         return false;
     }
+
 
     private Move policyChooseMove(List<Move> legal, GameState s) {
         Move best = null;
@@ -407,5 +415,19 @@ public final class MCTSPlayer {
             }
         }
     }
+
+    private int currentHeight(GameState s, int col, Player p) {
+        int perm = s.getMarkerHeight(p, col);
+        int temp = s.tempAtCol(col);
+        return (temp == 0) ? perm : temp;
+    }
+
+    private int tempGainThisTurn(GameState s, int col, Player p) {
+        int temp = s.tempAtCol(col);
+        if (temp == 0) return 0;
+        int perm = s.getMarkerHeight(p, col);
+        return Math.max(0, temp - perm);
+    }
+
 
 }
