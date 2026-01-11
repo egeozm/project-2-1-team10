@@ -19,8 +19,8 @@ public final class SimulationDemoRuleBased {
         long totalActions = 0;
 
         for (int g = 0; g < games; g++) {
-            RuleBasedPlayer red = new RuleBasedPlayer(new Random(seed ^ (g * 0x9E3779B97F4A7C15L)), 9f);
-            RuleBasedPlayer blue = new RuleBasedPlayer(new Random(seed ^ (g * 0xC2B2AE3D27D4EB4FL)), 9f);
+            RuleBasedPlayer red = new RuleBasedPlayer(new Random(seed ^ (g * 0x9E3779B97F4A7C15L)), 5f, 2f);
+            RuleBasedPlayer blue = new RuleBasedPlayer(new Random(seed ^ (g * 0xC2B2AE3D27D4EB4FL)), 5f, 2f);
 
             GameState state = GameState.initialize(Player.RED);
             int actions = playSingleGame(state, red, blue, diceRng, verbose);

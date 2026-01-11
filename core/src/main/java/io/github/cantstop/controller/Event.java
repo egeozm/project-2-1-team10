@@ -2,7 +2,7 @@ package io.github.cantstop.controller;
 
 import io.github.cantstop.model.GameState;
 
-public sealed interface Action permits RollAction, StopAction, MoveAction, WaitForInputAction {
+public interface Event {
 
     void apply(GameState state);
 }

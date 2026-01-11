@@ -3,9 +3,9 @@ package io.github.cantstop.controller;
 import io.github.cantstop.model.GameState;
 import io.github.cantstop.model.TurnManager;
 
-public final class StopAction implements Action {
+public final class StopEvent implements Event {
 
-    public StopAction() {}
+    public StopEvent() {}
 
     @Override
     public void apply(GameState state) {

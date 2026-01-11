@@ -4,12 +4,12 @@ import io.github.cantstop.model.DiceRoll;
 import io.github.cantstop.model.GameState;
 import io.github.cantstop.model.TurnManager;
 
-public final class RollAction implements Action {
+public final class RollEvent implements Event {
 
     private final DiceRoll roll;
     private final boolean isBust;
 
-    public RollAction(DiceRoll roll, boolean isBust) {
+    public RollEvent(DiceRoll roll, boolean isBust) {
         this.roll = roll;
         this.isBust = isBust;
     }

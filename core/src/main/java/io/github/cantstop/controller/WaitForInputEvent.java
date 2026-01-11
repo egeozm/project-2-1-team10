@@ -1,11 +1,10 @@
 package io.github.cantstop.controller;
 
 import io.github.cantstop.model.GameState;
-import io.github.cantstop.model.TurnManager;
 
-public final class WaitForInputAction implements Action {
+public final class WaitForInputEvent implements Event {
 
-    public WaitForInputAction() {}
+    public WaitForInputEvent() {}
 
     @Override
     public void apply(GameState state) {

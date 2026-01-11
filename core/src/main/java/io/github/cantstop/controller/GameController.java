@@ -21,7 +21,13 @@ public class GameController {
     }
 
 
-    public Action update() {
+    public Event update() {
+
+        Player opponent = gameState.getCurrentPlayer().opponent();
+
+        if (TurnManager.checkWinCondition(gameState, opponent)) {
+            return new GameOverEvent(opponent);
+        }
 
         IPlayerController currentPlayer =
             (gameState.getCurrentPlayer() == Player.RED)
@@ -32,7 +38,7 @@ public class GameController {
 
             case ROLL_OR_STOP -> {
                 Boolean decision = currentPlayer.rollOrStop(gameState);
-                if (decision == null) return new WaitForInputAction();
+                if (decision == null) return new WaitForInputEvent();
 
                 if (decision) {
                     DiceRoll roll = TurnManager.roll(gameState, rng);
@@ -40,10 +46,10 @@ public class GameController {
                     boolean isBust =
                         TurnManager.getLegalMoves(gameState, roll).isEmpty();
 
-                    return new RollAction(roll, isBust);
+                    return new RollEvent(roll, isBust);
                 }
 
-                return new StopAction();
+                return new StopEvent();
             }
 
             case CHOOSE_MOVE -> {
@@ -51,9 +57,9 @@ public class GameController {
                     TurnManager.getLegalMoves(gameState, gameState.getLastRoll());
 
                 Move selectedMove = currentPlayer.selectMove(gameState, legalMoves);
-                if (selectedMove == null) return new WaitForInputAction();
+                if (selectedMove == null) return new WaitForInputEvent();
 
-                return new MoveAction(selectedMove);
+                return new MoveEvent(selectedMove);
             }
         }
 

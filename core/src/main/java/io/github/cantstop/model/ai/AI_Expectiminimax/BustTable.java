@@ -13,9 +13,9 @@ public final class BustTable {
                         for (int d3 = 1; d3 <= 6; d3++) {
                             int s1 = d0 + d1, t1 = d2 + d3, s2 = d0 + d2, t2 = d1 + d3, s3 = d0 + d3, t3 = d1 + d2;
                             boolean ok =
-                                allowed(mask, s1) && allowed(mask, t1) ||
-                                    allowed(mask, s2) && allowed(mask, t2) ||
-                                    allowed(mask, s3) && allowed(mask, t3);
+                                allowed(mask, s1) || allowed(mask, t1) ||
+                                    allowed(mask, s2) || allowed(mask, t2) ||
+                                    allowed(mask, s3) || allowed(mask, t3);
                             if (ok) safe++;
                         }
             P[mask] = 1.0 - (safe / 1296.0);

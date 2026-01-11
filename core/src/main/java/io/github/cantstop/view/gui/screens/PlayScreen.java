@@ -60,7 +60,7 @@ public class PlayScreen implements Screen {
         gameState = GameState.initialize(Player.BLUE);
         humanController = new HumanController();
         playerBlue = humanController;
-        playerRed = (vsAI) ? new RuleBasedPlayer(rng, 9f) : humanController;
+        playerRed = (vsAI) ? new RuleBasedPlayer(rng, 7f, 2f) : humanController;
 
         // IMPORTANT: pass rng to GameController
         controller = new GameController(gameState, playerRed, playerBlue, rng);
@@ -141,17 +141,17 @@ public class PlayScreen implements Screen {
     private void advanceGame() {
         if (waitingForAnimation) return;
 
-        Action action = controller.update();
-        handleAction(action);
+        Event event = controller.update();
+        handleEvent(event);
     }
 
-    private void handleAction(Action action) {
+    private void handleEvent(Event event) {
 
         moveButtonRenderer.clearMoveButtons();
         stopButton.setVisible(false);
         rollButton.setVisible(false);
 
-        if (action instanceof WaitForInputAction) {
+        if (event instanceof WaitForInputEvent) {
 
             if (gameState.getTurnPhase() == TurnPhase.CHOOSE_MOVE) {
 
@@ -168,24 +168,26 @@ public class PlayScreen implements Screen {
 
         waitingForAnimation = true;
 
-        if (action instanceof RollAction roll) {
-            playAnimationFor(roll, () -> commit(action));
-        } else if (action instanceof StopAction stop) {
-            playAnimationFor(stop, () -> commit(action));
-        } else if (action instanceof MoveAction move) {
-            playAnimationFor(move, () -> commit(action));
+        if (event instanceof RollEvent roll) {
+            playAnimationFor(roll, () -> commit(event));
+        } else if (event instanceof StopEvent stop) {
+            playAnimationFor(stop, () -> commit(event));
+        } else if (event instanceof MoveEvent move) {
+            playAnimationFor(move, () -> commit(event));
+        } else if (event instanceof GameOverEvent gameOver) {
+            playAnimationFor(gameOver, () -> commit(event));
         } else {
-            throw new IllegalStateException("Unhandled action: " + action);
+            throw new IllegalStateException("Unhandled action: " + event);
         }
     }
 
-    private void commit(Action action) {
-        action.apply(gameState);
+    private void commit(Event event) {
+        event.apply(gameState);
         waitingForAnimation = false;
         advanceGame();
     }
 
-    private void playAnimationFor(RollAction action, Runnable onDone) {
+    private void playAnimationFor(RollEvent action, Runnable onDone) {
 
         diceRenderer.rollAnimation(1.03f);
 
@@ -201,7 +203,7 @@ public class PlayScreen implements Screen {
 
                             onDone.run();
                         }
-                    }, 1.5f);
+                    }, 1.4f);
                 } else {
                     onDone.run();
                 }
@@ -210,9 +212,9 @@ public class PlayScreen implements Screen {
         }, 1f);
     }
 
-    private void playAnimationFor(StopAction action, Runnable onDone) {
+    private void playAnimationFor(StopEvent action, Runnable onDone) {
 
-//        diceRenderer.stopAnimation(1f);
+        // add stop animation
 
         Timer.schedule(new Timer.Task() {
             @Override
@@ -221,12 +223,12 @@ public class PlayScreen implements Screen {
                 onDone.run();
 
             }
-        }, 1.5f);
+        }, 0.3f);
     }
 
-    private void playAnimationFor(MoveAction action, Runnable onDone) {
+    private void playAnimationFor(MoveEvent action, Runnable onDone) {
 
-//        diceRenderer.MoveAnimation(1f);
+        // add move animation
 
         Timer.schedule(new Timer.Task() {
             @Override
@@ -235,7 +237,13 @@ public class PlayScreen implements Screen {
                 onDone.run();
 
             }
-        }, 1.5f);
+        }, 0.3f);
+    }
+
+    private void playAnimationFor(GameOverEvent action, Runnable onDone) {
+
+        popupRenderer.showPopup(gameState.getCurrentPlayer().opponent() + " WINS", 1.2f);
+
     }
 
     @Override

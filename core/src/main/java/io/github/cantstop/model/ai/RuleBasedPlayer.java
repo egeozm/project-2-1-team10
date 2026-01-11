@@ -9,11 +9,13 @@ import java.util.*;
 public final class RuleBasedPlayer implements IPlayerController {
 
     private final Random rng;
-    private final float riskAversion; // higher value = more likely to stop
+    private final float progressWeight; // higher value = more likely to stop
+    private final float bustChanceWeight;  // higher value = more likely to stop
 
-    public RuleBasedPlayer(Random rng, float riskAversion) {
+    public RuleBasedPlayer(Random rng, float progressWeight, float bustChanceWeight) {
         this.rng = Objects.requireNonNull(rng, "rng");
-        this.riskAversion = riskAversion;
+        this.progressWeight = progressWeight;
+        this.bustChanceWeight = bustChanceWeight;
     }
 
     // stop criterion: if bust chance + progressValue > 1, stop.
@@ -26,10 +28,14 @@ public final class RuleBasedPlayer implements IPlayerController {
 
         float bustChance = computeBustChance(state); // value between 0 and 1
         float progressValue = computeProgressValue(state);
+        System.out.print("bustChance: " + bustChance * bustChanceWeight);
+        System.out.print(", progressValue: " + progressValue * progressWeight);
 
-        if (progressValue * riskAversion + bustChance > 1f) { // stop if rolling is not worth the risk
+        if (progressValue * progressWeight + bustChance * bustChanceWeight > 1f) { // stop if rolling is not worth the risk
+            System.out.println(", stop");
             return false;
         } else {
+            System.out.println(", roll");
             return true;
         }
     }
@@ -95,7 +101,7 @@ public final class RuleBasedPlayer implements IPlayerController {
         float progressValue = 0f;
 
         for (int i = 0; i < GameConstants.NUM_COLS; i++) {
-            progressValue += (state.tempAtCol(i) - state.getMarkerHeight(state.getCurrentPlayer(), i)) / (float) GameConstants.maxHeight(GameConstants.columnToSum(i));
+            progressValue += (Math.max(state.tempAtCol(i) - state.getMarkerHeight(state.getCurrentPlayer(), i), 0)) / (float) GameConstants.maxHeight(GameConstants.columnToSum(i));
         }
 
         return progressValue / GameConstants.NUM_COLS;

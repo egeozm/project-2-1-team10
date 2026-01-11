@@ -4,11 +4,11 @@ import io.github.cantstop.model.GameState;
 import io.github.cantstop.model.Move;
 import io.github.cantstop.model.TurnManager;
 
-public final class MoveAction implements Action {
+public final class MoveEvent implements Event {
 
     private final Move move;
 
-    public MoveAction(Move move) {
+    public MoveEvent(Move move) {
         this.move = move;
     }
 

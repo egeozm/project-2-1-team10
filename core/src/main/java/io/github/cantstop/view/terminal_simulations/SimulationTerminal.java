@@ -1,12 +1,12 @@
 package io.github.cantstop.view.terminal_simulations;
 
-import io.github.cantstop.controller.Action;
+import io.github.cantstop.controller.Event;
 import io.github.cantstop.controller.GameController;
 import io.github.cantstop.controller.IPlayerController;
-import io.github.cantstop.controller.MoveAction;
-import io.github.cantstop.controller.RollAction;
-import io.github.cantstop.controller.StopAction;
-import io.github.cantstop.controller.WaitForInputAction;
+import io.github.cantstop.controller.MoveEvent;
+import io.github.cantstop.controller.RollEvent;
+import io.github.cantstop.controller.StopEvent;
+import io.github.cantstop.controller.WaitForInputEvent;
 import io.github.cantstop.model.DiceRoll;
 import io.github.cantstop.model.GameState;
 import io.github.cantstop.model.Move;
@@ -124,7 +124,7 @@ public final class SimulationTerminal {
             Player current = state.getCurrentPlayer();
             TurnPhase phase = state.getTurnPhase();
 
-            Action a = engine.update();
+            Event a = engine.update();
             if (a == null) {
                 System.out.println("Engine returned null action; stopping for safety.");
                 break;
@@ -137,7 +137,7 @@ public final class SimulationTerminal {
             a.apply(state);
             actions++;
 
-            if (a instanceof WaitForInputAction) {
+            if (a instanceof WaitForInputEvent) {
                 System.out.println("Waiting for human input (not supported here). Stopping.");
                 break;
             }
@@ -150,10 +150,10 @@ public final class SimulationTerminal {
         return actions;
     }
 
-    private static String formatAction(Action a) {
-        if (a instanceof StopAction) return "STOP";
-        if (a instanceof RollAction ra) return "ROLL " + ra.getRoll() + (ra.isBust() ? " -> BUST" : "");
-        if (a instanceof MoveAction ma) return "MOVE " + ma.getMove();
+    private static String formatAction(Event a) {
+        if (a instanceof StopEvent) return "STOP";
+        if (a instanceof RollEvent ra) return "ROLL " + ra.getRoll() + (ra.isBust() ? " -> BUST" : "");
+        if (a instanceof MoveEvent ma) return "MOVE " + ma.getMove();
         return a.getClass().getSimpleName();
     }
 
@@ -166,7 +166,7 @@ public final class SimulationTerminal {
         Random rng = new Random(combined);
 
         return switch (spec.type()) {
-            case RULE_BASED -> new RuleBasedPlayer(rng, 9f);
+            case RULE_BASED -> new RuleBasedPlayer(rng, 5f, 2f);
 
             case MCTS -> new MctsControllerAdapter(
                 new MCTSPlayer(rng, spec.mctsIterations(), spec.mctsExplorationC(), spec.mctsRolloutMax())
