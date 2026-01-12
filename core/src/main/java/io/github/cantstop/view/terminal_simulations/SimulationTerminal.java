@@ -13,6 +13,7 @@ import io.github.cantstop.model.Move;
 import io.github.cantstop.model.Player;
 import io.github.cantstop.model.TurnManager;
 import io.github.cantstop.model.TurnPhase;
+import io.github.cantstop.model.ai.AI_ANN.AnnPlayer;
 import io.github.cantstop.model.ai.AI_Expectiminimax.ExpectiminimaxPlayer;
 import io.github.cantstop.model.ai.AI_MCTS.MCTSPlayer;
 import io.github.cantstop.model.ai.AI_MCTS.MctsAction;
@@ -22,6 +23,7 @@ import io.github.cantstop.model.match_history.GameResult;
 import io.github.cantstop.model.match_history.MatchHistoryStorage;
 import io.github.cantstop.model.match_history.MatchResult;
 
+import java.io.File;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -191,6 +193,7 @@ public final class SimulationTerminal {
     // Engine loop
     // ----------------------------------------------------------------------
 
+    @SuppressWarnings("unused")
     private static int playSingleGame(GameState state, GameController engine, boolean verbose) {
         final int MAX_ACTIONS = 4000;
         int actions = 0;
@@ -282,6 +285,11 @@ public final class SimulationTerminal {
                 spec.stopDepth(),
                 spec.perMoveMillis(),
                 true
+            );
+
+            case ANN -> new AnnPlayer(
+                spec.annWeightsPath() == null || spec.annWeightsPath().isBlank() ? null : new File(spec.annWeightsPath()),
+                spec.annRollThreshold()
             );
         };
     }
@@ -379,8 +387,9 @@ public final class SimulationTerminal {
         System.out.println("2) Expectiminimax - iterative deepening (per-move deadline)");
         System.out.println("3) MCTS - open loop search");
         System.out.println("4) Rule-based baseline");
+        System.out.println("5) ANN (imitation-learned)");
 
-        int choice = promptInt("Select option", 4, 1, 4);
+        int choice = promptInt("Select option", 5, 1, 5);
         long seed = promptLong("Agent RNG seed (blank for random)", System.nanoTime());
 
         return switch (choice) {
@@ -465,6 +474,12 @@ public final class SimulationTerminal {
             }
 
             case 4 -> AgentSpec.ruleBased(player, seed);
+            case 5 -> {
+                String defPath = "ann_weights.annw";
+                String path = promptString("ANN weights file path", defPath);
+                float thr = (float) promptDouble("Roll threshold (sigmoid>=thr => roll)", 0.50, 0.0, 1.0);
+                yield AgentSpec.ann(player, seed, path, thr);
+            }
             default -> throw new IllegalStateException("Unexpected value: " + choice);
         };
     }
@@ -493,8 +508,19 @@ public final class SimulationTerminal {
             s.rollDepth(), s.stopDepth(), s.perMoveMillis(),
             s.mctsIterations(), s.mctsExplorationC(), s.mctsRolloutMax(),
             s.mctsDpwK(), s.mctsDpwAlpha(),
-            s.mctsTimeBudgetMs()
+            s.mctsTimeBudgetMs(),
+            s.annWeightsPath(),
+            s.annRollThreshold()
         );
+    }
+
+    private static String promptString(String question, String def) {
+        while (true) {
+            System.out.printf("%s [%s]: ", question, def);
+            String line = readLine();
+            if (line.isEmpty()) return def;
+            return line;
+        }
     }
 
 

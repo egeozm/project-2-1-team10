@@ -7,6 +7,7 @@ public enum AgentType {
     EXPECTIMINIMAX_DEPTH,
     EXPECTIMINIMAX_TIMED,
     MCTS,
-    RULE_BASED
+    RULE_BASED,
+    ANN
 }
 

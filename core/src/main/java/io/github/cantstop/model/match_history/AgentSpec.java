@@ -22,7 +22,11 @@ public record AgentSpec(
     int mctsRolloutMax,
     double mctsDpwK,
     double mctsDpwAlpha,
-    long mctsTimeBudgetMs   // NEW: time budget per decision (0 = use iterations only)
+    long mctsTimeBudgetMs,  // NEW: time budget per decision (0 = use iterations only)
+
+    // ANN params
+    String annWeightsPath,
+    float annRollThreshold
 ) {
     // DPW defaults (keep in sync with MCTSPlayer defaults)
     private static final double DEFAULT_DPW_K = 4.0;
@@ -34,7 +38,8 @@ public record AgentSpec(
             player, AgentType.EXPECTIMINIMAX_DEPTH, seed,
             rollDepth, stopDepth, 0,
             0, 0.0, 0, 0.0, 0.0,
-            0L
+            0L,
+            null, 0.5f
         );
     }
 
@@ -43,7 +48,8 @@ public record AgentSpec(
             player, AgentType.EXPECTIMINIMAX_TIMED, seed,
             0, 0, perMoveMillis,
             0, 0.0, 0, 0.0, 0.0,
-            0L
+            0L,
+            null, 0.5f
         );
     }
 
@@ -52,7 +58,8 @@ public record AgentSpec(
             player, AgentType.EXPECTIMINIMAX_TIMED, seed,
             maxRollDepth, maxStopDepth, perMoveMillis,
             0, 0.0, 0, 0.0, 0.0,
-            0L
+            0L,
+            null, 0.5f
         );
     }
 
@@ -75,7 +82,8 @@ public record AgentSpec(
             0, 0, 0,
             iterations, explorationC, rolloutMax,
             dpwK, dpwAlpha,
-            Math.max(0L, timeBudgetMs)
+            Math.max(0L, timeBudgetMs),
+            null, 0.5f
         );
     }
 
@@ -84,7 +92,18 @@ public record AgentSpec(
             player, AgentType.RULE_BASED, seed,
             0, 0, 0,
             0, 0.0, 0, 0.0, 0.0,
-            0L
+            0L,
+            null, 0.5f
+        );
+    }
+
+    public static AgentSpec ann(Player player, long seed, String weightsPath, float rollThreshold) {
+        return new AgentSpec(
+            player, AgentType.ANN, seed,
+            0, 0, 0,
+            0, 0.0, 0, 0.0, 0.0,
+            0L,
+            weightsPath, rollThreshold
         );
     }
 
@@ -114,6 +133,10 @@ public record AgentSpec(
 
             case RULE_BASED ->
                 String.format("RuleBased(seed=%d)", seed);
+
+            case ANN ->
+                String.format("ANN(weights=%s, rollThr=%.2f, seed=%d)",
+                    annWeightsPath == null ? "<none>" : annWeightsPath, annRollThreshold, seed);
         };
     }
 
@@ -146,6 +169,14 @@ public record AgentSpec(
             }
             case RULE_BASED -> {
                 // No additional parameters
+            }
+            case ANN -> {
+                if (annWeightsPath == null) {
+                    json.append(",\n      \"annWeightsPath\": null");
+                } else {
+                    json.append(",\n      \"annWeightsPath\": \"").append(MatchHistoryStorage.escapeJson(annWeightsPath)).append("\"");
+                }
+                json.append(",\n      \"annRollThreshold\": ").append(annRollThreshold);
             }
         }
 

@@ -114,7 +114,7 @@ public final class ExpectiminimaxPlayer {
             double rollScore = expectedValueRoll(state, rollDepth, true); // current player is maximizing
 
             if (stopScore + EPS >= rollScore) {
-                return new RollAction(null);
+                return StopAction.INSTANCE;
             }
 
             // We chose to roll; now actually roll and pick the move for that real outcome
@@ -122,7 +122,7 @@ public final class ExpectiminimaxPlayer {
             List<Move> legal = TurnManager.getLegalMoves(state, realRoll);
             if (legal.isEmpty()) {
                 // instant bust on real roll → end turn
-                return StopAction.INSTANCE;
+                return new RollAction(null);
             }
 
             Move bestMove = bestMoveForRoll(state, realRoll, rollDepth);
@@ -188,6 +188,7 @@ public final class ExpectiminimaxPlayer {
     }
 
     // Evaluate ROLL + Move by branching over chance nodes and then maximizing over legal moves
+    @SuppressWarnings("unused")
     private double evalRoll(GameState state, DiceRoll actualRoll, int depth) {
         List<Move> legal = TurnManager.getLegalMoves(state, actualRoll);
         if (legal.isEmpty()) {
@@ -448,6 +449,7 @@ public final class ExpectiminimaxPlayer {
         return killer.get(StateHasher.hash(s));
     }
 
+    @SuppressWarnings("unused")
     private void rememberBest(GameState s, Move best) {
         if (best != null) killer.put(StateHasher.hash(s), best);
     }

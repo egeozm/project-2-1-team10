@@ -62,6 +62,7 @@ public final class MatchHistoryStorage {
             case EXPECTIMINIMAX_TIMED -> "ExpectiminimaxTimed";
             case MCTS -> "MCTS";
             case RULE_BASED -> "RuleBased";
+            case ANN -> "ANN";
         };
     }
 
