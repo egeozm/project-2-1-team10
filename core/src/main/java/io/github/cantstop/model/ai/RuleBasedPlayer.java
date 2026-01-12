@@ -18,6 +18,10 @@ public final class RuleBasedPlayer implements IPlayerController {
         this.bustChanceWeight = bustChanceWeight;
     }
 
+    public RuleBasedPlayer(Random rng, float progressWeight) {
+        this(rng, progressWeight, 1.0f);
+    }
+
     // stop criterion: if bust chance + progressValue > 1, stop.
     // progressValue = progress made this turn (proportional to entire board)
     // highest possible value is about 0.28 (if 3 columns have been entirely progressed through by temporary markers in just this turn)
@@ -28,14 +32,14 @@ public final class RuleBasedPlayer implements IPlayerController {
 
         float bustChance = computeBustChance(state); // value between 0 and 1
         float progressValue = computeProgressValue(state);
-        System.out.print("bustChance: " + bustChance * bustChanceWeight);
-        System.out.print(", progressValue: " + progressValue * progressWeight);
+        //System.out.print("bustChance: " + bustChance * bustChanceWeight);
+        //System.out.print(", progressValue: " + progressValue * progressWeight);
 
         if (progressValue * progressWeight + bustChance * bustChanceWeight > 1f) { // stop if rolling is not worth the risk
-            System.out.println(", stop");
+            //System.out.println(", stop");
             return false;
         } else {
-            System.out.println(", roll");
+            //System.out.println(", roll");
             return true;
         }
     }

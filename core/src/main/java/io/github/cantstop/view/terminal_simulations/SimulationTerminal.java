@@ -116,6 +116,9 @@ public final class SimulationTerminal {
     private static int playSingleGame(GameState state, GameController engine, boolean verbose) {
         final int MAX_ACTIONS = 4000;
         int actions = 0;
+        int rolls = 0;
+        int moves = 0;
+        int stops = 0;
 
         while (!TurnManager.checkWinCondition(state, Player.RED)
             && !TurnManager.checkWinCondition(state, Player.BLUE)
@@ -125,6 +128,10 @@ public final class SimulationTerminal {
             TurnPhase phase = state.getTurnPhase();
 
             Event a = engine.update();
+            if (a instanceof RollEvent) rolls++;
+            else if (a instanceof MoveEvent) moves++;
+            else if (a instanceof StopEvent) stops++;
+
             if (a == null) {
                 System.out.println("Engine returned null action; stopping for safety.");
                 break;
@@ -147,6 +154,8 @@ public final class SimulationTerminal {
             System.out.println("Safety break: exceeded maximum action count for a single game.");
         }
 
+        System.out.printf("rolls=%d moves=%d stops=%d total=%d%n", rolls, moves, stops, actions);
+
         return actions;
     }
 
@@ -166,10 +175,19 @@ public final class SimulationTerminal {
         Random rng = new Random(combined);
 
         return switch (spec.type()) {
-            case RULE_BASED -> new RuleBasedPlayer(rng, 5f, 2f);
+            case RULE_BASED -> new RuleBasedPlayer(rng, 9f);
 
             case MCTS -> new MctsControllerAdapter(
-                new MCTSPlayer(rng, spec.mctsIterations(), spec.mctsExplorationC(), spec.mctsRolloutMax())
+                new MCTSPlayer(
+                    rng,
+                    spec.mctsIterations(),
+                    spec.mctsExplorationC(),
+                    spec.mctsRolloutMax(),
+                    spec.mctsDpwK(),
+                    spec.mctsDpwAlpha(),
+                    spec.mctsTimeBudgetMs()
+                )
+
             );
 
             case EXPECTIMINIMAX_DEPTH -> new ExpectiminimaxControllerAdapter(
@@ -201,9 +219,12 @@ public final class SimulationTerminal {
         @Override
         public Boolean rollOrStop(GameState state) {
             MctsAction a = mcts.decide(state);
-            if (a == null) return true; // default roll
-            return a.isRoll();
+            if (a == null) return true;
+            if (a.isRoll()) return true;
+            if (a.isStop()) return false;
+            return true;
         }
+
 
         @Override
         public Move selectMove(GameState state, List<Move> legalMoves) {
@@ -401,16 +422,25 @@ public final class SimulationTerminal {
             IPlayerController red = buildController(redSpec, matchSeed, g, GOLDEN_G);
             IPlayerController blue = buildController(blueSpec, matchSeed, g, GOLDEN_G >>> 1);
 
-            Random matchRng = new Random(matchSeed ^ (GOLDEN_G * (g + 1L)));
-            GameController engine = new GameController(state, red, blue, matchRng);
+            long combined = matchSeed ^ (GOLDEN_G * (g + 1L));
+            Random gameRng = new Random(combined);
+            GameController engine = new GameController(state, red, blue, gameRng);
 
-            int actions = playSingleGame(state, engine, verbose);
-            totalActions += actions;
+            GameStats st = playSingleGameStats(state, engine, verbose);
+            totalActions += st.actions();
 
             Player winner = TurnManager.checkWinCondition(state, Player.RED) ? Player.RED : Player.BLUE;
             if (winner == Player.RED) redWins++; else blueWins++;
 
-            gameResults.add(new GameResult(g + 1, winner, actions));
+            System.out.printf(
+                "Game %3d -> %s | actions=%d turns=%d | rolls=%d moves=%d stops=%d busts=%d | %d ms%n",
+                g + 1, winner,
+                st.actions(), st.turns(),
+                st.rolls(), st.moves(), st.stops(), st.busts(),
+                st.elapsedMs()
+            );
+
+            gameResults.add(new GameResult(g + 1, winner, st.actions()));
         }
 
         return new MatchResult(
@@ -425,4 +455,66 @@ public final class SimulationTerminal {
             gameResults
         );
     }
+
+
+    private record GameStats(
+        int actions,
+        int rolls,
+        int moves,
+        int stops,
+        int busts,
+        int turns,
+        long elapsedMs
+    ) {}
+
+    private static GameStats playSingleGameStats(GameState state, GameController engine, boolean verbose) {
+        final int MAX_ACTIONS = 4000;
+
+        int actions = 0;
+        int rolls = 0;
+        int moves = 0;
+        int stops = 0;
+        int busts = 0;
+        int turns = 0;
+
+        long t0 = System.nanoTime();
+
+        Player prevPlayer = state.getCurrentPlayer();
+
+        while (!TurnManager.checkWinCondition(state, Player.RED)
+            && !TurnManager.checkWinCondition(state, Player.BLUE)
+            && actions < MAX_ACTIONS) {
+
+            Event a = engine.update();
+            if (a == null) break;
+
+            if (a instanceof RollEvent ra) {
+                rolls++;
+                if (ra.isBust()) busts++;
+            } else if (a instanceof MoveEvent) {
+                moves++;
+            } else if (a instanceof StopEvent) {
+                stops++;
+            }
+
+            if (verbose) {
+                Player current = state.getCurrentPlayer();
+                TurnPhase phase = state.getTurnPhase();
+                System.out.printf("[%s][%s] %s%n", current, phase, formatAction(a));
+            }
+
+            a.apply(state);
+            actions++;
+
+            Player now = state.getCurrentPlayer();
+            if (now != prevPlayer) {
+                turns++;
+                prevPlayer = now;
+            }
+        }
+
+        long elapsedMs = (System.nanoTime() - t0) / 1_000_000L;
+        return new GameStats(actions, rolls, moves, stops, busts, turns, elapsedMs);
+    }
+
 }

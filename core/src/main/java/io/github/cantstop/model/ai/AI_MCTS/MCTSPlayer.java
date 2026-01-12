@@ -16,17 +16,31 @@ public final class MCTSPlayer {
     private final int maxIterations;
     private final double explorationC;
     private final int rolloutMaxRolls;
+    private final double dpwK;
+    private final double dpwAlpha;
+    private final long timeBudgetMs;
 
-    public MCTSPlayer(Random rng, int maxIterations, double explorationC, int rolloutMaxRolls) {
-        if (rng != null) {
-            this.rng = rng;
-        } else {
-            this.rng = ThreadLocalRandom.current();
-        }
+
+    public MCTSPlayer(Random rng,
+                      int maxIterations,
+                      double explorationC,
+                      int rolloutMaxRolls,
+                      double dpwK,
+                      double dpwAlpha,
+                      long timeBudgetMs) {
+        this.rng = (rng != null) ? rng : ThreadLocalRandom.current();
         this.maxIterations = Math.max(1, maxIterations);
         this.explorationC = explorationC;
         this.rolloutMaxRolls = Math.max(1, rolloutMaxRolls);
+        this.dpwK = dpwK;
+        this.dpwAlpha = dpwAlpha;
+        this.timeBudgetMs = Math.max(0, timeBudgetMs);
     }
+
+    public MCTSPlayer(Random rng, int maxIterations, double explorationC, int rolloutMaxRolls) {
+        this(rng, maxIterations, explorationC, rolloutMaxRolls, 0.0, 0.0, 0L);
+    }
+
 
     /* Decide an action STOP ROLL or MOVE for the current phase */
     public MctsAction decide(GameState rootState) {
@@ -34,37 +48,60 @@ public final class MCTSPlayer {
         final List<MctsAction> rootActions = legalActionsFrom(rootState, null);
         final Node root = new Node(null, Node.Type.DECISION, rootPlayer, rootActions);
 
-        for (int it = 0; it < maxIterations; it++) {
+        final long deadlineNs = (timeBudgetMs > 0)
+            ? System.nanoTime() + timeBudgetMs * 1_000_000L
+            : Long.MAX_VALUE;
+
+        for (int it = 0; it < maxIterations && System.nanoTime() < deadlineNs; it++) {
             GameState s = rootState.copy();
             Node node = root;
             DiceRoll lastRoll = null;
 
-            // Selection
-            while (!node.hasUntried() && !isTerminal(s)) {
+            // ---------------- Selection (DPW-aware) ----------------
+            while (!isTerminal(s)) {
+
+                int limit = dpwLimit(node.visits);
+
+                boolean canExpandHere = node.hasUntried() && node.children.size() < limit;
+                if (canExpandHere) break;
+
+                if (node.children.isEmpty()) break;
+
                 node = selectUCT(node);
                 StepResult step = applyActionInPlace(s, node.actionFromParent);
                 lastRoll = step.lastRoll;
                 if (step.terminal) break;
             }
 
-            // Expansion
-            if (!isTerminal(s) && node.hasUntried()) {
-                sortUntriedForExpansion(node.untried, s, lastRoll, rootPlayer);
-                MctsAction a = node.popUntried();
-                StepResult step = applyActionInPlace(s, a);
-                Node child = node.addChild(a, Node.Type.DECISION, s.getCurrentPlayer(), legalActionsFrom(s, step.lastRoll));
-                child.actionFromParent = a;
+            // ---------------- Expansion (DPW-aware) ----------------
+            if (!isTerminal(s)) {
+                int limit = dpwLimit(node.visits);
+                if (node.hasUntried() && node.children.size() < limit) {
+                    sortUntriedForExpansion(node.untried, s, lastRoll, rootPlayer);
+                    MctsAction a = node.popUntried();
 
-                if (step.terminal) {
-                    double reward = winnerIs(s, rootPlayer) ? 1.0 : 0.0;
-                    backpropagate(child, reward);
-                    continue;
+                    StepResult step = applyActionInPlace(s, a);
+
+                    Node child = node.addChild(
+                        a,
+                        Node.Type.DECISION,
+                        s.getCurrentPlayer(),
+                        legalActionsFrom(s, step.lastRoll)
+                    );
+                    child.actionFromParent = a;
+
+                    if (step.terminal) {
+                        double reward = winnerIs(s, rootPlayer) ? 1.0 : 0.0;
+                        backpropagate(child, reward);
+                        continue;
+                    }
+
+                    node = child;
+                    lastRoll = step.lastRoll;
                 }
-                node = child;
-                lastRoll = step.lastRoll;
             }
 
-            // Simulation or terminal reached during selection
+            // ---------------- Simulation / Terminal ----------------
             double reward;
             if (!isTerminal(s)) {
                 reward = rolloutFrom(s, rootPlayer);
@@ -76,6 +113,7 @@ public final class MCTSPlayer {
 
         return bestActionAtRoot(root);
     }
+
 
     // ---------------- UCT ----------------
 
@@ -297,8 +335,11 @@ public final class MCTSPlayer {
 
     private List<MctsAction> legalActionsFrom(GameState s, DiceRoll lastRoll) {
         if (s.getTurnPhase() == TurnPhase.ROLL_OR_STOP) {
-            return Arrays.asList(MctsAction.stop(), MctsAction.roll());
-        } else {
+            boolean canStop = s.countActiveColumns() > 0;
+            return canStop
+                ? Arrays.asList(MctsAction.stop(), MctsAction.roll())
+                : Collections.singletonList(MctsAction.roll());
+        }else {
             // CHOOSE_MOVE requires last roll from the previous ROLL
             if (lastRoll == null) {
                 return Collections.emptyList();
@@ -361,43 +402,64 @@ public final class MCTSPlayer {
         if (rootState.getTurnPhase() != TurnPhase.CHOOSE_MOVE) {
             throw new IllegalStateException("decide(state,lastRoll) only for CHOOSE_MOVE phase");
         }
-        final Player rootPlayer = rootState.getCurrentPlayer();
 
-        // Root starts with MOVE actions for the given last roll
+        final Player rootPlayer = rootState.getCurrentPlayer();
         final List<MctsAction> rootActions = legalActionsFrom(rootState, lastRoll);
         final Node root = new Node(null, Node.Type.DECISION, rootPlayer, rootActions);
 
-        for (int it = 0; it < maxIterations; it++) {
+        final long deadlineNs = (timeBudgetMs > 0)
+            ? System.nanoTime() + timeBudgetMs * 1_000_000L
+            : Long.MAX_VALUE;
+
+        for (int it = 0; it < maxIterations && System.nanoTime() < deadlineNs; it++) {
             GameState s = rootState.copy();
             Node node = root;
-            DiceRoll lr = lastRoll; // important since CHOOSE_MOVE root starts with a known roll
+            DiceRoll lr = lastRoll;
 
-            // Selection
-            while (!node.hasUntried() && !isTerminal(s)) {
+            // ---------------- Selection (DPW-aware) ----------------
+            while (!isTerminal(s)) {
+
+                int limit = dpwLimit(node.visits);
+                boolean canExpandHere = node.hasUntried() && node.children.size() < limit;
+                if (canExpandHere) break;
+
+                if (node.children.isEmpty()) break;
+
                 node = selectUCT(node);
                 StepResult step = applyActionInPlace(s, node.actionFromParent);
                 lr = step.lastRoll;
                 if (step.terminal) break;
             }
 
-            // Expansion
-            if (!isTerminal(s) && node.hasUntried()) {
-                sortUntriedForExpansion(node.untried, s, lr, rootPlayer);
-                MctsAction a = node.popUntried();
-                StepResult step = applyActionInPlace(s, a);
-                Node child = node.addChild(a, Node.Type.DECISION, s.getCurrentPlayer(), legalActionsFrom(s, step.lastRoll));
-                child.actionFromParent = a;
+            // ---------------- Expansion (DPW-aware) ----------------
+            if (!isTerminal(s)) {
+                int limit = dpwLimit(node.visits);
+                if (node.hasUntried() && node.children.size() < limit) {
+                    sortUntriedForExpansion(node.untried, s, lr, rootPlayer);
+                    MctsAction a = node.popUntried();
 
-                if (step.terminal) {
-                    double reward = winnerIs(s, rootPlayer) ? 1.0 : 0.0;
-                    backpropagate(child, reward);
-                    continue;
+                    StepResult step = applyActionInPlace(s, a);
+
+                    Node child = node.addChild(
+                        a,
+                        Node.Type.DECISION,
+                        s.getCurrentPlayer(),
+                        legalActionsFrom(s, step.lastRoll)
+                    );
+                    child.actionFromParent = a;
+
+                    if (step.terminal) {
+                        double reward = winnerIs(s, rootPlayer) ? 1.0 : 0.0;
+                        backpropagate(child, reward);
+                        continue;
+                    }
+
+                    node = child;
+                    lr = step.lastRoll;
                 }
-                node = child;
-                lr = step.lastRoll;
             }
 
-            // Simulation or terminal
+            // ---------------- Simulation / Terminal ----------------
             double reward;
             if (!isTerminal(s)) {
                 reward = rolloutFrom(s, rootPlayer);
@@ -407,20 +469,13 @@ public final class MCTSPlayer {
             backpropagate(node, reward);
         }
 
-        // In CHOOSE_MOVE we expect a MOVE
         MctsAction best = bestActionAtRoot(root);
-        boolean okMove = best != null && best.isMove();
-        if (okMove) {
-            return best;
-        } else {
-            List<MctsAction> acts = legalActionsFrom(rootState, lastRoll);
-            if (acts.isEmpty()) {
-                return null;
-            } else {
-                return acts.get(0);
-            }
-        }
+        if (best != null && best.isMove()) return best;
+
+        List<MctsAction> acts = legalActionsFrom(rootState, lastRoll);
+        return acts.isEmpty() ? null : acts.get(0);
     }
+
 
     private int currentHeight(GameState s, int col, Player p) {
         int perm = s.getMarkerHeight(p, col);
@@ -433,6 +488,12 @@ public final class MCTSPlayer {
         if (temp == 0) return 0;
         int perm = s.getMarkerHeight(p, col);
         return Math.max(0, temp - perm);
+    }
+
+    private int dpwLimit(int visits) {
+        if (dpwK <= 0.0) return Integer.MAX_VALUE;
+        double v = Math.max(1, visits);
+        return Math.max(1, (int)Math.floor(dpwK * Math.pow(v, dpwAlpha)));
     }
 
 
