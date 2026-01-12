@@ -67,7 +67,7 @@ public final class MCTSPlayer {
 
                 if (node.children.isEmpty()) break;
 
-                node = selectUCT(node);
+                node = selectUCT(node, rootPlayer);
                 StepResult step = applyActionInPlace(s, node.actionFromParent);
                 lastRoll = step.lastRoll;
                 if (step.terminal) break;
@@ -117,14 +117,19 @@ public final class MCTSPlayer {
 
     // ---------------- UCT ----------------
 
-    private Node selectUCT(Node parent) {
+    private Node selectUCT(Node parent, Player rootPlayer) {
         Node best = null;
         double bestScore = Double.NEGATIVE_INFINITY;
+
         final double lnN = Math.log(Math.max(1, parent.visits));
+
+        final double sign = (parent.playerToMove == rootPlayer) ? 1.0 : -1.0;
+
         for (Node ch : parent.children.values()) {
             double q = ch.mean();
             double u = explorationC * Math.sqrt(lnN / Math.max(1, ch.visits));
-            double score = q + u;
+            double score = sign * q + u;
+
             if (score > bestScore) {
                 bestScore = score;
                 best = ch;
@@ -133,18 +138,24 @@ public final class MCTSPlayer {
         return best;
     }
 
+
     // ---------- Expansion ordering and ranking ----------
 
     private void sortUntriedForExpansion(List<MctsAction> untried, GameState s, DiceRoll lastRoll, Player root) {
+        final boolean isRootTurn = (s.getCurrentPlayer() == root);
+        final int sign = isRootTurn ? 1 : -1;
+
         untried.sort((a, b) -> {
-            int ra = rankMoveHeuristic(a, s);
-            int rb = rankMoveHeuristic(b, s);
+            int ra = sign * rankMoveHeuristic(a, s);
+            int rb = sign * rankMoveHeuristic(b, s);
             if (ra != rb) return Integer.compare(rb, ra);
-            double ha = lookaheadHeuristic(s, a, root);
-            double hb = lookaheadHeuristic(s, b, root);
+
+            double ha = sign * lookaheadHeuristic(s, a, root);
+            double hb = sign * lookaheadHeuristic(s, b, root);
             return Double.compare(hb, ha);
         });
     }
+
 
     private int rankMoveHeuristic(MctsAction a, GameState s) {
         if (a.isMove()) {
@@ -425,7 +436,7 @@ public final class MCTSPlayer {
 
                 if (node.children.isEmpty()) break;
 
-                node = selectUCT(node);
+                node = selectUCT(node, rootPlayer);
                 StepResult step = applyActionInPlace(s, node.actionFromParent);
                 lr = step.lastRoll;
                 if (step.terminal) break;

@@ -16,7 +16,7 @@ public final class SimulationBestVsBaselines {
     private static final double DPW_ALPHA   = 0.5;
 
     // Evaluation settings
-    private static final int  GAMES_PER_SIDE_DEFAULT = 5; // total games = 2 * this (swap seats)
+    private static final int  GAMES_PER_SIDE_DEFAULT = 300; // total games = 2 * this (swap seats)
     private static final long MATCH_SEED_DEFAULT     = 7777777L;
     private static final boolean VERBOSE_DEFAULT     = false;
 

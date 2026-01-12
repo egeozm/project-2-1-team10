@@ -39,6 +39,25 @@ public final class SimulationTerminal {
     private static final long GOLDEN_G = 0x9E3779B97F4A7C15L;
     private static final Scanner SCANNER = new Scanner(System.in);
 
+    // MCTS PRESETS
+// BEST
+    private static final int    MCTS_BEST_MAX_ITERS   = 1_000_000;
+    private static final long   MCTS_BEST_TIME_MS     = 200;
+    private static final int    MCTS_BEST_ROLLOUT_MAX = 10;
+    private static final double MCTS_BEST_C           = 0.35;
+    private static final double MCTS_BEST_DPW_K       = 25.0;
+    private static final double MCTS_BEST_DPW_ALPHA   = 0.5;
+
+    // RESEARCH (C=50 [-100,100])
+    private static final int    MCTS_RESEARCH_MAX_ITERS   = 1_000_000;
+    private static final long   MCTS_RESEARCH_TIME_MS     = 200;
+    private static final int    MCTS_RESEARCH_ROLLOUT_MAX = 10;
+    private static final double MCTS_RESEARCH_C_RAW       = 50.0;
+    private static final double MCTS_RESEARCH_C_SCALED    = 0.25; //~[0,1]
+    private static final double MCTS_RESEARCH_DPW_K       = 25.0;
+    private static final double MCTS_RESEARCH_DPW_ALPHA   = 0.3;
+
+
     private SimulationTerminal() {}
 
     public static void main(String[] args) {
@@ -46,60 +65,118 @@ public final class SimulationTerminal {
         System.out.println("   Can't Stop – AI Match Playground    ");
         System.out.println("=======================================\n");
 
-        int games = promptInt("How many games should be played?", 10, 1, 5_000);
+        boolean swapSeats = promptBoolean("Evaluation mode (swap seats, same seeds)?", true);
+
         boolean verbose = promptBoolean("Verbose mode (per-move logs)?", false);
         long matchSeed = promptLong("Enter a base match seed (blank for random)", System.nanoTime());
+
+        if (swapSeats) {
+            int gamesPerSide = promptInt("Games per side (total games = 2x)", 100, 1, 5_000);
+
+            System.out.println("\nIn swap-seats mode, the first configured agent is treated as 'Agent A'.");
+            System.out.println("Game #1..N  : A plays as RED");
+            System.out.println("Game #N+1..2N: A plays as BLUE\n");
+
+            AgentSpec agentA = promptAgent(Player.RED);   // A starts as RED
+            AgentSpec agentB = promptAgent(Player.BLUE);  // B starts as BLUE
+
+            System.out.printf("%nStarting SWAP evaluation: %d game(s) per side => total=%d%n", gamesPerSide, 2 * gamesPerSide);
+            System.out.printf("Agent A (initially RED)  -> %s%n", agentA.summary());
+            System.out.printf("Agent B (initially BLUE) -> %s%n", agentB.summary());
+            System.out.printf("Match seed               : %d%n%n", matchSeed);
+
+            System.out.println("=== MATCH 1: as configured (A=RED, B=BLUE) ===");
+            MatchResult m1 = playMatchup(agentA, agentB, gamesPerSide, matchSeed, verbose);
+
+            System.out.println("\n=== MATCH 2: swapped seats (A=BLUE, B=RED) ===");
+            MatchResult m2 = playMatchup(
+                withPlayer(agentB, Player.RED),   // B now plays RED
+                withPlayer(agentA, Player.BLUE),  // A now plays BLUE
+                gamesPerSide,
+                matchSeed,
+                verbose
+            );
+
+            // Combine results from the perspective of agent identity:
+            // In MATCH 1, A=RED => A wins are redWins
+            // In MATCH 2, A=BLUE => A wins are blueWins
+            int aWins = m1.redWins() + m2.blueWins();
+            int totalGames = m1.totalGames() + m2.totalGames();
+            int bWins = totalGames - aWins;
+
+            long totalActions = m1.totalActions() + m2.totalActions();
+            double aWinRate = totalGames > 0 ? (double) aWins / totalGames : 0.0;
+
+            // Build a combined MatchResult where:
+            // - redAgent = Agent A, blueAgent = Agent B
+            // - winner field in GameResult is mapped to (RED=A, BLUE=B) for BOTH halves
+            List<GameResult> combinedGames = new ArrayList<>(totalGames);
+
+            // First half: winner already matches identity mapping (A=RED, B=BLUE)
+            combinedGames.addAll(m1.games());
+
+            // Second half: winner must be remapped because A=BLUE, B=RED in that run
+            // If winner was BLUE in match2 => A won => map to RED
+            // If winner was RED in match2  => B won => map to BLUE
+            for (GameResult gr : m2.games()) {
+                int newNum = gr.gameNumber() + gamesPerSide;
+                Player mappedWinner = (gr.winner() == Player.BLUE) ? Player.RED : Player.BLUE;
+                combinedGames.add(new GameResult(newNum, mappedWinner, gr.actionCount()));
+            }
+
+            MatchResult combined = new MatchResult(
+                Instant.now().toString(),
+                matchSeed,
+                totalGames,
+                aWins,      // treat as "RED wins" = Agent A wins
+                bWins,      // treat as "BLUE wins" = Agent B wins
+                totalActions,
+                agentA,     // RED agent = Agent A
+                agentB,     // BLUE agent = Agent B
+                combinedGames
+            );
+
+            System.out.println("\n============= FINAL SUMMARY (SWAP-SEATS) =============");
+            System.out.printf("Total games : %d (2 x %d)%n", totalGames, gamesPerSide);
+            System.out.printf("Agent A wins: %d%n", aWins);
+            System.out.printf("Agent B wins: %d%n", bWins);
+            System.out.printf("A win rate  : %.3f%n", aWinRate);
+            System.out.printf("Avg actions : %.2f%n", totalGames > 0 ? (double) totalActions / totalGames : 0.0);
+            System.out.printf("Match seed  : %d%n", matchSeed);
+            System.out.println("Note: In the COMBINED saved file, winner=RED means Agent A won; winner=BLUE means Agent B won.");
+
+            if (promptBoolean("Save results to file? (will save match1, match2 and combined)", true)) {
+                String f1 = MatchHistoryStorage.saveMatchResult(m1);
+                String f2 = MatchHistoryStorage.saveMatchResult(m2);
+                String fc = MatchHistoryStorage.saveMatchResult(combined);
+
+                if (f1 != null) System.out.printf("Saved match1 to: %s%n", f1);
+                if (f2 != null) System.out.printf("Saved match2 to: %s%n", f2);
+                if (fc != null) System.out.printf("Saved combined to: %s%n", fc);
+            }
+
+            return;
+        }
+
+        // Non-swap, simple mode:
+        int games = promptInt("How many games should be played?", 10, 1, 5_000);
 
         AgentSpec redSpec = promptAgent(Player.RED);
         AgentSpec blueSpec = promptAgent(Player.BLUE);
 
         System.out.printf("%nStarting match: %d game(s)%n", games);
         System.out.printf("RED  -> %s%n", redSpec.summary());
-        System.out.printf("BLUE -> %s%n%n", blueSpec.summary());
+        System.out.printf("BLUE -> %s%n", blueSpec.summary());
+        System.out.printf("Match seed  : %d%n%n", matchSeed);
 
-        int redWins = 0;
-        int blueWins = 0;
-        long totalActions = 0;
-        List<GameResult> gameResults = new ArrayList<>();
-
-        for (int g = 0; g < games; g++) {
-            GameState state = GameState.initialize(Player.RED);
-
-            IPlayerController red = buildController(redSpec, matchSeed, g, GOLDEN_G);
-            IPlayerController blue = buildController(blueSpec, matchSeed, g, GOLDEN_G >>> 1);
-
-            // IMPORTANT: GameController needs RNG for real dice rolls.
-            Random matchRng = new Random(matchSeed ^ (GOLDEN_G * (g + 1L)));
-            GameController engine = new GameController(state, red, blue, matchRng);
-
-            int actions = playSingleGame(state, engine, verbose);
-            totalActions += actions;
-
-            Player winner = TurnManager.checkWinCondition(state, Player.RED) ? Player.RED : Player.BLUE;
-            if (winner == Player.RED) redWins++; else blueWins++;
-
-            System.out.printf("Game %2d -> %s in %d actions%n", g + 1, winner, actions);
-            gameResults.add(new GameResult(g + 1, winner, actions));
-        }
+        MatchResult matchResult = playMatchup(redSpec, blueSpec, games, matchSeed, verbose);
 
         System.out.println("\n============= FINAL SUMMARY =============");
-        System.out.printf("Games played: %d%n", games);
-        System.out.printf("RED wins    : %d%n", redWins);
-        System.out.printf("BLUE wins   : %d%n", blueWins);
-        System.out.printf("Avg actions : %.2f%n", games > 0 ? (double) totalActions / games : 0.0);
+        System.out.printf("Games played: %d%n", matchResult.totalGames());
+        System.out.printf("RED wins    : %d%n", matchResult.redWins());
+        System.out.printf("BLUE wins   : %d%n", matchResult.blueWins());
+        System.out.printf("Avg actions : %.2f%n", matchResult.totalGames() > 0 ? (double) matchResult.totalActions() / matchResult.totalGames() : 0.0);
         System.out.printf("Match seed  : %d%n", matchSeed);
-
-        MatchResult matchResult = new MatchResult(
-            Instant.now().toString(),
-            matchSeed,
-            games,
-            redWins,
-            blueWins,
-            totalActions,
-            redSpec,
-            blueSpec,
-            gameResults
-        );
 
         if (promptBoolean("Save results to file?", true)) {
             String filename = MatchHistoryStorage.saveMatchResult(matchResult);
@@ -108,6 +185,7 @@ public final class SimulationTerminal {
             }
         }
     }
+
 
     // ----------------------------------------------------------------------
     // Engine loop
@@ -175,7 +253,7 @@ public final class SimulationTerminal {
         Random rng = new Random(combined);
 
         return switch (spec.type()) {
-            case RULE_BASED -> new RuleBasedPlayer(rng, 9f);
+            case RULE_BASED -> new RuleBasedPlayer(rng, 9f, 1f);
 
             case MCTS -> new MctsControllerAdapter(
                 new MCTSPlayer(
@@ -323,11 +401,69 @@ public final class SimulationTerminal {
                 }
             }
             case 3 -> {
-                int iterations = promptInt("MCTS iterations per decision", 20_000, 100, 2_000_000);
-                double exploration = promptDouble("Exploration constant (C)", 1.414, 0.1, 5.0);
-                int rollout = promptInt("Rollout max rolls", 10, 1, 50);
-                yield AgentSpec.mcts(player, seed, iterations, exploration, rollout);
+                System.out.println("\nMCTS preset:");
+                System.out.println("1) BEST (your tuned)");
+                System.out.println("2) RESEARCH (paper RAW: C=50, assumes utility ~[-100,100])");
+                System.out.println("3) RESEARCH (scaled: C≈0.25 for utility ~[0,1])");
+                System.out.println("4) Custom");
+
+                int preset = promptInt("Select preset", 1, 1, 4);
+
+                int    defIters;
+                long   defTimeMs;
+                int    defRollout;
+                double defC;
+                double defDpwK;
+                double defDpwAlpha;
+
+                switch (preset) {
+                    case 1 -> { // BEST
+                        defIters   = MCTS_BEST_MAX_ITERS;
+                        defTimeMs  = MCTS_BEST_TIME_MS;
+                        defRollout = MCTS_BEST_ROLLOUT_MAX;
+                        defC       = MCTS_BEST_C;
+                        defDpwK    = MCTS_BEST_DPW_K;
+                        defDpwAlpha= MCTS_BEST_DPW_ALPHA;
+                    }
+                    case 2 -> { // RESEARCH raw
+                        defIters   = MCTS_RESEARCH_MAX_ITERS;
+                        defTimeMs  = MCTS_RESEARCH_TIME_MS;
+                        defRollout = MCTS_RESEARCH_ROLLOUT_MAX;
+                        defC       = MCTS_RESEARCH_C_RAW;
+                        defDpwK    = MCTS_RESEARCH_DPW_K;
+                        defDpwAlpha= MCTS_RESEARCH_DPW_ALPHA;
+                    }
+                    case 3 -> { // RESEARCH scaled
+                        defIters   = MCTS_RESEARCH_MAX_ITERS;
+                        defTimeMs  = MCTS_RESEARCH_TIME_MS;
+                        defRollout = MCTS_RESEARCH_ROLLOUT_MAX;
+                        defC       = MCTS_RESEARCH_C_SCALED;
+                        defDpwK    = MCTS_RESEARCH_DPW_K;
+                        defDpwAlpha= MCTS_RESEARCH_DPW_ALPHA;
+                    }
+                    default -> { // Custom
+                        defIters   = 200_000;
+                        defTimeMs  = 200;
+                        defRollout = 10;
+                        defC       = 0.35;
+                        defDpwK    = 25.0;
+                        defDpwAlpha= 0.5;
+                    }
+                }
+
+                int iterations = promptInt("MCTS max iterations (safety cap)", defIters, 100, 2_000_000);
+                long timeMs    = promptLong("MCTS time budget per decision in ms (0 = disabled)", defTimeMs);
+
+                double exploration = promptDouble("Exploration constant (C)", defC, 0.0, 200.0);
+
+                int rollout   = promptInt("Rollout max rolls", defRollout, 1, 200);
+
+                double dpwK     = promptDouble("DPW k (0 disables DPW)", defDpwK, 0.0, 500.0);
+                double dpwAlpha = promptDouble("DPW alpha (0..1)", defDpwAlpha, 0.0, 1.0);
+
+                yield AgentSpec.mcts(player, seed, iterations, exploration, rollout, dpwK, dpwAlpha, timeMs);
             }
+
             case 4 -> AgentSpec.ruleBased(player, seed);
             default -> throw new IllegalStateException("Unexpected value: " + choice);
         };
@@ -350,6 +486,17 @@ public final class SimulationTerminal {
             }
         }
     }
+
+    private static AgentSpec withPlayer(AgentSpec s, Player p) {
+        return new AgentSpec(
+            p, s.type(), s.seed(),
+            s.rollDepth(), s.stopDepth(), s.perMoveMillis(),
+            s.mctsIterations(), s.mctsExplorationC(), s.mctsRolloutMax(),
+            s.mctsDpwK(), s.mctsDpwAlpha(),
+            s.mctsTimeBudgetMs()
+        );
+    }
+
 
     private static double promptDouble(String question, double def, double min, double max) {
         while (true) {
