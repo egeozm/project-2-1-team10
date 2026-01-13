@@ -25,9 +25,11 @@ public class PostProcessor {
             false
         );
 
+        System.out.println(viewport.getWorldWidth() + "   " + viewport.getWorldHeight());
+
         frameBuffer.getColorBufferTexture().setFilter(
-            Texture.TextureFilter.Linear,
-            Texture.TextureFilter.Linear
+            Texture.TextureFilter.Nearest,
+            Texture.TextureFilter.Nearest
         );
 
 
