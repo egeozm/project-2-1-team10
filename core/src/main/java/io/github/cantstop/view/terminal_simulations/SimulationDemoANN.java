@@ -25,7 +25,7 @@ public final class SimulationDemoANN {
     public static void main(String[] args) {
         int games = argOr(args, 0, 50);
         long seed = argOr(args, 1, System.nanoTime());
-        String weightsPath = strOr(args, 2, "ann_weights.annw");
+        String weightsPath = strOr(args, 2, "ann_weights_mcts.annw");
         float thr = (float) doubleOr(args, 3, 0.5);
         String opponent = strOr(args, 4, "rule").toLowerCase();
 
