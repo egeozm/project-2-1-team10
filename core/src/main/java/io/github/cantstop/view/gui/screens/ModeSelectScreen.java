@@ -15,6 +15,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 
 import io.github.cantstop.view.gui.Main;
 import io.github.cantstop.view.gui.SharedSkin;
+import io.github.cantstop.view.gui.screens.AiSelectScreen;
 
 public class ModeSelectScreen implements Screen {
 
@@ -40,12 +41,12 @@ public class ModeSelectScreen implements Screen {
 
         pvpButton.addListener(new ClickListener() {
             public void clicked(InputEvent event, float x, float y) {
-                game.startGame(false);
+                game.startGame();
             }
         });
         pvaiButton.addListener(new ClickListener() {
             public void clicked(InputEvent event, float x, float y) {
-                game.startGame(true);
+                game.setScreen(new AiSelectScreen(game));
             }
         });
         backButton.addListener(new ClickListener() {

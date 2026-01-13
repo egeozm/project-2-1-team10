@@ -16,12 +16,15 @@ import io.github.cantstop.model.*;
 import io.github.cantstop.model.ai.AI_MCTS.MCTSPlayer;
 import io.github.cantstop.view.gui.*;
 import io.github.cantstop.view.gui.PostProcessor;
+import io.github.cantstop.view.gui.AiConfig;
+import io.github.cantstop.view.gui.AgentType;
 
 import java.util.*;
 
 public class PlayScreen implements Screen {
 
     private final Main game;
+    private final AiConfig config;
 
     // Backend game model
     private GameState gameState;
@@ -57,10 +60,16 @@ public class PlayScreen implements Screen {
     private boolean waitingForAnimation = false;
     private boolean gameOver = false;
 
-    public PlayScreen(Main game , boolean vsAI) {
+    public PlayScreen(Main game) {
+        this(game, null); //pvp
+    }
+
+    public PlayScreen(Main game , AiConfig config) {
 
         this.game = game;
-        this.vsAI = vsAI;
+        this.config = config;
+
+        this.vsAI= (config != null);
 
         // ----------------------------------
         // initialize backend
@@ -74,22 +83,24 @@ public class PlayScreen implements Screen {
         if (vsAI) {
 
             // “research-like” params (you can later wire these to settings)
-            int maxIters = 1_000_000;
-            long timeMs = 50;          // GUI-friendly (20–100ms); use 200ms only if you accept lag
-            int rolloutMax = 10;
-            double C = 0.35;
-            double dpwK = 25.0;
-            double dpwAlpha = 0.5;
+            //int maxIters = 1_000_000;
+           // long timeMs = 50;          // GUI-friendly (20–100ms); use 200ms only if you accept lag
+          //  int rolloutMax = 10;
+          //  double C = 0.35;
+           // double dpwK = 25.0;
+          //  double dpwAlpha = 0.5;
 
-            MCTSPlayer mcts = new MCTSPlayer(
-                aiRng, maxIters, C, rolloutMax, dpwK, dpwAlpha, timeMs
-            );
+          //  MCTSPlayer mcts = new MCTSPlayer(
+           //     aiRng, maxIters, C, rolloutMax, dpwK, dpwAlpha, timeMs
+          //  );
 
-            playerRed = new MctsControllerAdapter(mcts);
+          //  playerRed = new MctsControllerAdapter(mcts);
+            playerRed = buildAiController(config);
 
         } else {
             playerRed = humanController;
         }
+
 
         // IMPORTANT: pass diceRng to GameController (dice only)
         controller = new GameController(gameState, playerRed, playerBlue, diceRng);
@@ -318,6 +329,41 @@ public class PlayScreen implements Screen {
         postProcessor.end(shaderTime, game.viewport);
 
     }
+    private IPlayerController buildAiController(AiConfig config) {
+
+        AgentType type = config.type();
+        int timeMs = config.timeMs();
+
+        switch (type) {
+
+            case RULE_BASED -> {
+                return new io.github.cantstop.model.ai.RuleBasedPlayer(aiRng, 5f, 2f);
+            }
+
+            case MCTS -> {
+                int maxIters = 1_000_000;
+                int rolloutMax = 10;
+                double C = 0.35;
+                double dpwK = 25.0;
+                double dpwAlpha = 0.5;
+
+                MCTSPlayer mcts = new MCTSPlayer(
+                    aiRng, maxIters, C, rolloutMax, dpwK, dpwAlpha, timeMs
+                );
+
+                return new io.github.cantstop.controller.MctsControllerAdapter(mcts);
+            }
+
+
+            case MINIMAX -> {
+                //adapter for expectiminimax like the one we use for mcts?
+                throw new IllegalStateException("minimax adapter ");
+            }
+        }
+
+        throw new IllegalStateException("Unk AgentType: " + type);
+    }
+
 
     @Override
     public void resize(int width, int height) {
