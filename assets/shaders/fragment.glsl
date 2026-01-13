@@ -3,52 +3,50 @@ precision mediump float;
 #endif
 
 varying vec2 v_texCoords;
+varying vec4 v_color;
 
 uniform sampler2D u_texture;
 uniform vec2 u_resolution;
-uniform float u_time;
 
 void main() {
+
     vec2 uv = v_texCoords;
-    vec2 texel = 1.0 / u_resolution;
 
-    // -------------------------------------------------
-    // Horizontal wobble (CRT-style distortion)
-    // -------------------------------------------------
-    float wobble =
-    sin(uv.y * u_resolution.y * 3.14159 * 0.1 + u_time * 4.0)
-    * 0.6 * texel.x;
+    vec2 pixel_size = 1.0 / u_resolution;
 
-    vec2 wobbleUV = vec2(uv.x + wobble, uv.y);
-
-    // -------------------------------------------------
-    // Chromatic aberration
-    // -------------------------------------------------
-    float aberr = 4.0;
-
-    vec4 center = texture2D(u_texture, wobbleUV);
-
-    float r = texture2D(
-    u_texture,
-    wobbleUV + vec2(texel.x * aberr, 0.0)
-    ).r;
-
-    float g = center.g;
-
-    float b = texture2D(
-    u_texture,
-    wobbleUV - vec2(texel.x * aberr, 0.0)
-    ).b;
-
-    vec4 color = vec4(r, g, b, center.a);
-
-    // -------------------------------------------------
+    // ----------------------------------
     // Scanlines
-    // -------------------------------------------------
-    float scanline =
-    sin(uv.y * u_resolution.y * 3.14159 * 0.3 + u_time);
+    // ----------------------------------
+    float y_pixel = uv.y / pixel_size.y;
 
-    color.rgb *= 0.9 + 0.1 * scanline;
+    float scan_line =
+    0.5 * step(4.0, mod(y_pixel - 1.0, 6.0))
+    + 0.5 * step(2.0, mod(y_pixel - 2.0, 6.0));
 
-    gl_FragColor = color;
+    // ----------------------------------
+    // Horizontal blur
+    // ----------------------------------
+    vec4 colour = vec4(0.0);
+
+    for (int x = 0; x < 3; x++) {
+        float offset = float(x) * pixel_size.x;
+        colour += (1.0 / 6.0) * texture2D(u_texture, uv + vec2( offset, 0.0));
+        colour += (1.0 / 6.0) * texture2D(u_texture, uv + vec2(-offset, 0.0));
+    }
+
+    // Global darkening
+    colour.rgb *= 0.8;
+
+    // ----------------------------------
+    // Luminance-based scanline darkening
+    // ----------------------------------
+    float luminance =
+    colour.r * 0.3
+    + colour.g * 0.59
+    + colour.b * 0.11;
+
+    colour.rgb *= 1.0 - (0.5 * scan_line - 0.5 * luminance);
+
+    // 🔑 THIS LINE FIXES FONT COLOR
+    gl_FragColor = colour * v_color;
 }

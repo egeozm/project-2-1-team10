@@ -2,7 +2,9 @@ package io.github.cantstop.view.gui.screens;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
@@ -60,7 +62,10 @@ public class PlayScreen implements Screen {
         this.game = game;
         this.vsAI = vsAI;
 
+        // ----------------------------------
         // initialize backend
+        // ----------------------------------
+
         gameState = GameState.initialize(Player.BLUE);
         humanController = new HumanController();
 
@@ -89,9 +94,31 @@ public class PlayScreen implements Screen {
         // IMPORTANT: pass diceRng to GameController (dice only)
         controller = new GameController(gameState, playerRed, playerBlue, diceRng);
 
+        // ----------------------------------
         // initialize frontend
-        font = new BitmapFont();
-        font.getData().setScale(0.8f);
+        // ----------------------------------
+
+        // initialize font
+        FreeTypeFontGenerator generator =
+            new FreeTypeFontGenerator(Gdx.files.internal("fonts/pixel_font.ttf"));
+
+        FreeTypeFontGenerator.FreeTypeFontParameter params =
+            new FreeTypeFontGenerator.FreeTypeFontParameter();
+
+        params.size = 12;              // base size
+        params.mono = true;
+        params.minFilter = Texture.TextureFilter.Nearest;
+        params.magFilter = Texture.TextureFilter.Nearest;
+        params.genMipMaps = false;
+        params.kerning = false;
+        params.borderWidth = 0;
+        params.shadowOffsetX = 0;
+        params.shadowOffsetY = 0;
+
+        font = generator.generateFont(params);
+        generator.dispose();
+        font.getData().setScale(1f);
+
         borderStyle = ButtonStyle.createBorderButtonStyle();
 
         boardRenderer = new BoardRenderer(gameState, game.batch, font, game.assets);
