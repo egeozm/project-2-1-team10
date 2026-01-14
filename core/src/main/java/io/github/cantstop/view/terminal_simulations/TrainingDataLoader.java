@@ -8,7 +8,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class TrainingDataLoader {
-    private static final String FILE_PATH = "core/src/main/java/io/github/cantstop/results/mcts_training_data.csv";
+    private static final String FILE_PATH = "core/src/main/java/io/github/cantstop/model/ai/Hybrid_Model/ann_training_data.csv";
 
     public static void logState(GameState state, Player winner) {
         ensureHeader();
