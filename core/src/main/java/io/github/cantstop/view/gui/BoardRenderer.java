@@ -84,7 +84,7 @@ public class BoardRenderer {
     // Draw column numbers
     public void drawColumnNumbers() {
 
-        font.setColor(0.6f, 0.6f, 0.8f, 1.0f);
+        font.setColor(GuiConstants.textColor);
         font.getData().setScale(1f);
         GlyphLayout layout = new GlyphLayout();
 
@@ -95,7 +95,7 @@ public class BoardRenderer {
             layout.setText(font, text);
 
             float x = colX(col) + CELL_W / 2 - layout.width / 2 - 4;
-            float y = ORIGIN_Y - 10;
+            float y = ORIGIN_Y - 14;
 
             font.draw(batch, layout, x, y);
         }
@@ -103,16 +103,16 @@ public class BoardRenderer {
 
     // Show whose turn it is
     public void drawCurrentPlayer() {
-        font.setColor(Color.WHITE);
+        font.setColor(GuiConstants.textColor);
         font.getData().setScale(1f);
         font.draw(batch, "Current Player:", 10, 260);
 
         font.getData().setScale(3f);
         if (gameState.getCurrentPlayer() == Player.RED) {
-            font.setColor(160f / 255f, 19f / 255f, 19f / 255f, 1);
+            font.setColor(GuiConstants.red);
             font.draw(batch, "RED", 10, 224);
         } else {
-            font.setColor(95f / 255f, 205f / 255f, 228f / 255f, 1);
+            font.setColor(GuiConstants.blue);
             font.draw(batch, "BLUE", 10, 224);
         }
     }
