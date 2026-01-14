@@ -32,6 +32,14 @@ public class GameController {
         switch (gameState.getTurnPhase()) {
 
             case ROLL_OR_STOP -> {
+
+                // check if game has been won
+                Player opponent = gameState.getCurrentPlayer().opponent();
+
+                if (TurnManager.checkWinCondition(gameState, opponent)) {
+                    return new GameOverEvent(opponent);
+                }
+
                 boolean canStop = gameState.countActiveColumns() > 0;
 
                 Boolean decision = currentPlayer.rollOrStop(gameState);

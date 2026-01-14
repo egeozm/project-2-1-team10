@@ -59,15 +59,18 @@ public class Main extends Game {
         setScreen(new MenuScreen(this));
     }
 
-    public void startGame(boolean vsAI) {
+    public void startGame() {
         if(mainMenuMusic.isPlaying()){
             mainMenuMusic.stop();
         }
-        setScreen(new PlayScreen(this, vsAI));
+        setScreen(new PlayScreen(this));
     }
 
-    public void startGame() {
-        startGame(false);
+    public void startGame(AiConfig config) {
+        if(mainMenuMusic.isPlaying()){
+            mainMenuMusic.stop();
+        }
+        setScreen(new PlayScreen(this, config));
     }
 
     @Override

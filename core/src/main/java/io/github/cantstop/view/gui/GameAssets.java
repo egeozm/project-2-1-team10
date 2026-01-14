@@ -14,6 +14,12 @@ public final class GameAssets implements Disposable {
     public Texture redMarker1,  redMarker2,  redCross;
     public Texture[] diceTextures; // indices 0..5 for faces 1..6
 
+    private Texture getTexture(String path) {
+        Texture t = am.get(path, Texture.class);
+        t.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+        return t;
+    }
+
     /** Queue and load everything we need for PlayScreen in one go. */
     public void loadAll() {
         // Board
@@ -36,17 +42,17 @@ public final class GameAssets implements Disposable {
         am.finishLoading();
 
         // Resolve handles
-        board       = am.get("board.png", Texture.class);
-        blueMarker1 = am.get("markers/blue_marker_1.png", Texture.class);
-        blueMarker2 = am.get("markers/blue_marker_2.png", Texture.class);
-        blueCross   = am.get("markers/blue_cross.png", Texture.class);
-        redMarker1  = am.get("markers/red_marker_1.png", Texture.class);
-        redMarker2  = am.get("markers/red_marker_2.png", Texture.class);
-        redCross    = am.get("markers/red_cross.png", Texture.class);
+        board       = getTexture("board.png");
+        blueMarker1 = getTexture("markers/blue_marker_1.png");
+        blueMarker2 = getTexture("markers/blue_marker_2.png");
+        blueCross   = getTexture("markers/blue_cross.png");
+        redMarker1  = getTexture("markers/red_marker_1.png");
+        redMarker2  = getTexture("markers/red_marker_2.png");
+        redCross    = getTexture("markers/red_cross.png");
 
         diceTextures = new Texture[6];
         for (int i = 0; i < 6; i++) {
-            diceTextures[i] = am.get("dice/d" + (i + 1) + ".png", Texture.class);
+            diceTextures[i] = getTexture("dice/d" + (i + 1) + ".png");
         }
     }
 

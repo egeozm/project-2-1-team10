@@ -20,14 +20,16 @@ public class PostProcessor {
 
         frameBuffer = new FrameBuffer(
             Pixmap.Format.RGBA8888,
-            (int) viewport.getWorldWidth()*4,
-            (int) viewport.getWorldHeight()*4,
+            (int) viewport.getWorldWidth(),
+            (int) viewport.getWorldHeight(),
             false
         );
 
+        System.out.println(viewport.getWorldWidth() + "   " + viewport.getWorldHeight());
+
         frameBuffer.getColorBufferTexture().setFilter(
-            Texture.TextureFilter.Linear,
-            Texture.TextureFilter.Linear
+            Texture.TextureFilter.Nearest,
+            Texture.TextureFilter.Nearest
         );
 
 
@@ -55,8 +57,8 @@ public class PostProcessor {
         shader.bind();
         shader.setUniformf(
             "u_resolution",
-            viewport.getWorldWidth()*4,
-            viewport.getWorldHeight()*4
+            viewport.getWorldWidth()*8,
+            viewport.getWorldHeight()*8
         );
         shader.setUniformf("u_time", time);
 
