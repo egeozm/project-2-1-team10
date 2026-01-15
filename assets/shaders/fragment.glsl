@@ -8,20 +8,19 @@ varying vec4 v_color;
 uniform sampler2D u_texture;
 uniform vec2 u_resolution;
 
+const float PI = 3.14159265;
+
 void main() {
 
     vec2 uv = v_texCoords;
 
-    vec2 pixel_size = 1.0 / u_resolution;
+    vec2 pixel_size = 1.0 / u_resolution * 8.0;
 
     // ----------------------------------
     // Scanlines
     // ----------------------------------
-    float y_pixel = uv.y / pixel_size.y;
 
-    float scan_line =
-    0.5 * step(4.0, mod(y_pixel - 1.0, 6.0))
-    + 0.5 * step(2.0, mod(y_pixel - 2.0, 6.0));
+    float scanline = 0.5 * (cos(uv.y * 2.0 * PI / pixel_size.y) + 1.0);
 
     // ----------------------------------
     // Horizontal blur
@@ -29,13 +28,10 @@ void main() {
     vec4 colour = vec4(0.0);
 
     for (int x = 0; x < 3; x++) {
-        float offset = float(x) * pixel_size.x;
+        float offset = float(x) * pixel_size.x / 8.0;
         colour += (1.0 / 6.0) * texture2D(u_texture, uv + vec2( offset, 0.0));
         colour += (1.0 / 6.0) * texture2D(u_texture, uv + vec2(-offset, 0.0));
     }
-
-    // Global darkening
-    colour.rgb *= 0.8;
 
     // ----------------------------------
     // Luminance-based scanline darkening
@@ -45,8 +41,7 @@ void main() {
     + colour.g * 0.59
     + colour.b * 0.11;
 
-    colour.rgb *= 1.0 - (0.5 * scan_line - 0.5 * luminance);
+    colour.rgb *= 1.0 - (0.5 * scanline - 0.5 * luminance);
 
-    // 🔑 THIS LINE FIXES FONT COLOR
     gl_FragColor = colour * v_color;
 }

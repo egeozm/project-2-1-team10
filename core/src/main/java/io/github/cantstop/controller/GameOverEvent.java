@@ -12,6 +12,8 @@ public class GameOverEvent implements Event{
         this.winner = winner;
     }
 
+    public Player getWinner() {return this.winner;}
+
     @Override
     public void apply(GameState state) {}
 }

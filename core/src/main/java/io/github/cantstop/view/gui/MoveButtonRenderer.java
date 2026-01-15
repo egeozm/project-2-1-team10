@@ -32,7 +32,7 @@ public class MoveButtonRenderer {
     public MoveButtonRenderer(GameState gameState, PlayScreen playScreen) {
         this.gameState = gameState;
         this.playScreen = playScreen;
-        borderStyle = ButtonStyle.createBorderButtonStyle();
+        borderStyle = ButtonStyle.createBorderButtonStyle(playScreen.buttonFont);
     }
 
     // Draw board texture

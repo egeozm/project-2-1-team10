@@ -52,7 +52,8 @@ public class PlayScreen implements Screen {
     private TextButton stopButton;
     private TextButton menuButton;
     private final List<TextButton> moveButtons = new ArrayList<>();
-    private BitmapFont font;
+    public BitmapFont font;
+    public BitmapFont buttonFont;
 
     private PostProcessor postProcessor;
     private float shaderTime = 0f;
@@ -116,7 +117,7 @@ public class PlayScreen implements Screen {
         FreeTypeFontGenerator.FreeTypeFontParameter params =
             new FreeTypeFontGenerator.FreeTypeFontParameter();
 
-        params.size = 12;              // base size
+        params.size = 12; // recommended sizes are 12 and 24
         params.mono = true;
         params.minFilter = Texture.TextureFilter.Nearest;
         params.magFilter = Texture.TextureFilter.Nearest;
@@ -127,10 +128,13 @@ public class PlayScreen implements Screen {
         params.shadowOffsetY = 0;
 
         font = generator.generateFont(params);
-        generator.dispose();
-        font.getData().setScale(1f);
 
-        borderStyle = ButtonStyle.createBorderButtonStyle();
+        params.size = 12;
+        buttonFont = generator.generateFont(params);
+
+        generator.dispose();
+
+        borderStyle = ButtonStyle.createBorderButtonStyle(buttonFont);
 
         boardRenderer = new BoardRenderer(gameState, game.batch, font, game.assets);
         diceRenderer = new DiceRenderer(gameState, game.batch, game.assets);
@@ -163,6 +167,41 @@ public class PlayScreen implements Screen {
                 game.setScreen(new MenuScreen(game));
             }
         });
+    }
+
+    private IPlayerController buildAiController(AiConfig config) {
+
+        AgentType type = config.type();
+        int timeMs = config.timeMs();
+
+        switch (type) {
+
+            case RULE_BASED -> {
+                return new io.github.cantstop.model.ai.RuleBasedPlayer(aiRng, 7f, 2f);
+            }
+
+            case MCTS -> {
+                int maxIters = 1_000_000;
+                int rolloutMax = 10;
+                double C = 0.35;
+                double dpwK = 25.0;
+                double dpwAlpha = 0.5;
+
+                MCTSPlayer mcts = new MCTSPlayer(
+                    aiRng, maxIters, C, rolloutMax, dpwK, dpwAlpha, timeMs
+                );
+
+                return new io.github.cantstop.controller.MctsControllerAdapter(mcts);
+            }
+
+
+            case MINIMAX -> {
+                //adapter for expectiminimax like the one we use for mcts?
+                throw new IllegalStateException("minimax adapter ");
+            }
+        }
+
+        throw new IllegalStateException("Unk AgentType: " + type);
     }
 
     @Override
@@ -203,17 +242,17 @@ public class PlayScreen implements Screen {
     private void advanceGame() {
         if (waitingForAnimation) return;
 
-        Event action = controller.update();
-        handleAction(action);
+        Event event = controller.update();
+        handleEvent(event);
     }
 
-    private void handleAction(Event action) {
+    private void handleEvent(Event event) {
 
         moveButtonRenderer.clearMoveButtons();
         stopButton.setVisible(false);
         rollButton.setVisible(false);
 
-        if (action instanceof WaitForInputEvent) {
+        if (event instanceof WaitForInputEvent) {
 
             if (gameState.getTurnPhase() == TurnPhase.CHOOSE_MOVE) {
 
@@ -230,24 +269,26 @@ public class PlayScreen implements Screen {
 
         waitingForAnimation = true;
 
-        if (action instanceof RollEvent roll) {
-            playAnimationFor(roll, () -> commit(action));
-        } else if (action instanceof StopEvent stop) {
-            playAnimationFor(stop, () -> commit(action));
-        } else if (action instanceof MoveEvent move) {
-            playAnimationFor(move, () -> commit(action));
+        if (event instanceof RollEvent roll) {
+            playAnimationFor(roll, () -> commit(event));
+        } else if (event instanceof StopEvent stop) {
+            playAnimationFor(stop, () -> commit(event));
+        } else if (event instanceof MoveEvent move) {
+            playAnimationFor(move, () -> commit(event));
+        } else if (event instanceof GameOverEvent gameOver) {
+            playAnimationFor(gameOver, () -> commit(event));
         } else {
-            throw new IllegalStateException("Unhandled action: " + action);
+            throw new IllegalStateException("Unhandled event: " + event);
         }
     }
 
-    private void commit(Event action) {
-        action.apply(gameState);
+    private void commit(Event event) {
+        event.apply(gameState);
         waitingForAnimation = false;
         advanceGame();
     }
 
-    private void playAnimationFor(RollEvent action, Runnable onDone) {
+    private void playAnimationFor(RollEvent event, Runnable onDone) {
 
         diceRenderer.rollAnimation(1.03f);
 
@@ -255,7 +296,7 @@ public class PlayScreen implements Screen {
             @Override
             public void run() {
 
-                if (action.isBust()) {
+                if (event.isBust()) {
                     popupRenderer.showPopup(gameState.getCurrentPlayer() + "BUSTED", 1.2f);
                     Timer.schedule(new Timer.Task() {
                         @Override
@@ -263,7 +304,7 @@ public class PlayScreen implements Screen {
 
                             onDone.run();
                         }
-                    }, 1.5f);
+                    }, 1.4f);
                 } else {
                     onDone.run();
                 }
@@ -272,7 +313,7 @@ public class PlayScreen implements Screen {
         }, 1f);
     }
 
-    private void playAnimationFor(StopEvent action, Runnable onDone) {
+    private void playAnimationFor(StopEvent event, Runnable onDone) {
 
         //        diceRenderer.stopAnimation(1f);
 
@@ -283,10 +324,10 @@ public class PlayScreen implements Screen {
                 onDone.run();
 
             }
-        }, 1.5f);
+        }, 0.3f);
     }
 
-    private void playAnimationFor(MoveEvent action, Runnable onDone) {
+    private void playAnimationFor(MoveEvent event, Runnable onDone) {
 
         //        diceRenderer.MoveAnimation(1f);
 
@@ -297,7 +338,13 @@ public class PlayScreen implements Screen {
                 onDone.run();
 
             }
-        }, 1.5f);
+        }, 0.3f);
+    }
+
+    private void playAnimationFor(GameOverEvent event, Runnable onDone) {
+
+        popupRenderer.showPopup( event.getWinner() + " WINS", 1.2f);
+
     }
 
     @Override
@@ -327,43 +374,7 @@ public class PlayScreen implements Screen {
         stage.draw();
 
         postProcessor.end(shaderTime, game.viewport);
-
     }
-    private IPlayerController buildAiController(AiConfig config) {
-
-        AgentType type = config.type();
-        int timeMs = config.timeMs();
-
-        switch (type) {
-
-            case RULE_BASED -> {
-                return new io.github.cantstop.model.ai.RuleBasedPlayer(aiRng, 5f, 2f);
-            }
-
-            case MCTS -> {
-                int maxIters = 1_000_000;
-                int rolloutMax = 10;
-                double C = 0.35;
-                double dpwK = 25.0;
-                double dpwAlpha = 0.5;
-
-                MCTSPlayer mcts = new MCTSPlayer(
-                    aiRng, maxIters, C, rolloutMax, dpwK, dpwAlpha, timeMs
-                );
-
-                return new io.github.cantstop.controller.MctsControllerAdapter(mcts);
-            }
-
-
-            case MINIMAX -> {
-                //adapter for expectiminimax like the one we use for mcts?
-                throw new IllegalStateException("minimax adapter ");
-            }
-        }
-
-        throw new IllegalStateException("Unk AgentType: " + type);
-    }
-
 
     @Override
     public void resize(int width, int height) {
@@ -390,40 +401,6 @@ public class PlayScreen implements Screen {
         //        postProcessor.dispose();
         if (game.assets != null) {
             game.assets.dispose();
-        }
-    }
-
-    /**
-     * Adapter: allows MCTSPlayer (which returns MctsAction) to be used as an IPlayerController.
-     * GameController still controls dice with diceRng; AI uses only MCTSPlayer + its own aiRng.
-     */
-    private static final class MctsControllerAdapter implements IPlayerController {
-
-        private final MCTSPlayer mcts;
-
-        private MctsControllerAdapter(MCTSPlayer mcts) {
-            this.mcts = Objects.requireNonNull(mcts, "mcts");
-        }
-
-        @Override
-        public Boolean rollOrStop(GameState state) {
-            // true = roll, false = stop
-            var act = mcts.decide(state);
-            if (act == null) return true; // fallback: roll
-            return !act.isStop();
-        }
-
-        @Override
-        public Move selectMove(GameState state, List<Move> legalMoves) {
-            if (legalMoves == null || legalMoves.isEmpty()) return null;
-
-            DiceRoll lastRoll = state.getLastRoll();
-            var act = mcts.decide(state, lastRoll);
-
-            if (act != null && act.isMove() && act.move != null) {
-                return act.move;
-            }
-            return legalMoves.get(0);
         }
     }
 }
