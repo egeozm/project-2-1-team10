@@ -5,6 +5,8 @@ import io.github.cantstop.model.TurnManager;
 
 public final class StopEvent implements Event {
 
+
+
     public StopEvent() {}
 
     @Override

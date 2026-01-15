@@ -35,7 +35,7 @@ public final class GameAssets implements Disposable {
 
         // Dice faces 1..6
         for (int i = 1; i <= 6; i++) {
-            am.load("dice/d" + i + ".png", Texture.class);
+            am.load("dice/new_dice/d" + i + ".png", Texture.class);
         }
 
         // Block until loaded. If you want async, swap to am.update() loop later.
@@ -52,7 +52,7 @@ public final class GameAssets implements Disposable {
 
         diceTextures = new Texture[6];
         for (int i = 0; i < 6; i++) {
-            diceTextures[i] = getTexture("dice/d" + (i + 1) + ".png");
+            diceTextures[i] = getTexture("dice/new_dice/d" + (i + 1) + ".png");
         }
     }
 

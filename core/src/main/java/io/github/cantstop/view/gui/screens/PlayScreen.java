@@ -52,7 +52,8 @@ public class PlayScreen implements Screen {
     private TextButton stopButton;
     private TextButton menuButton;
     private final List<TextButton> moveButtons = new ArrayList<>();
-    private BitmapFont font;
+    public BitmapFont font;
+    public BitmapFont buttonFont;
 
     private PostProcessor postProcessor;
     private float shaderTime = 0f;
@@ -116,7 +117,7 @@ public class PlayScreen implements Screen {
         FreeTypeFontGenerator.FreeTypeFontParameter params =
             new FreeTypeFontGenerator.FreeTypeFontParameter();
 
-        params.size = 12;              // base size
+        params.size = 12; // recommended sizes are 12 and 24
         params.mono = true;
         params.minFilter = Texture.TextureFilter.Nearest;
         params.magFilter = Texture.TextureFilter.Nearest;
@@ -127,10 +128,13 @@ public class PlayScreen implements Screen {
         params.shadowOffsetY = 0;
 
         font = generator.generateFont(params);
-        generator.dispose();
-        font.getData().setScale(1f);
 
-        borderStyle = ButtonStyle.createBorderButtonStyle();
+        params.size = 12;
+        buttonFont = generator.generateFont(params);
+
+        generator.dispose();
+
+        borderStyle = ButtonStyle.createBorderButtonStyle(buttonFont);
 
         boardRenderer = new BoardRenderer(gameState, game.batch, font, game.assets);
         diceRenderer = new DiceRenderer(gameState, game.batch, game.assets);

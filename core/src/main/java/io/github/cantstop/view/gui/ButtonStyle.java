@@ -10,10 +10,10 @@ import com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable;
 
 public class ButtonStyle {
 
-    public static TextButton.TextButtonStyle createBorderButtonStyle() {
+    public static TextButton.TextButtonStyle createBorderButtonStyle(BitmapFont font) {
         Pixmap pm = new Pixmap(16, 16, Pixmap.Format.RGBA8888);
-        pm.setColor(0,0,0,0); pm.fill();
-        pm.setColor(Color.WHITE); pm.drawRectangle(0,0,16,16);
+        pm.setColor(GuiConstants.buttonFillColor); pm.fill();
+        pm.setColor(GuiConstants.textColor); pm.drawRectangle(0,0,16,16);
 
         NinePatch patch = new NinePatch(new Texture(pm),1,1,1,1);
         pm.dispose();
@@ -21,8 +21,8 @@ public class ButtonStyle {
         TextButton.TextButtonStyle style = new TextButton.TextButtonStyle();
         style.up = new NinePatchDrawable(patch);
         style.down = new NinePatchDrawable(patch);
-        style.font = new BitmapFont();
-        style.fontColor = Color.WHITE;
+        style.font = font;
+        style.fontColor = GuiConstants.textColor;
         return style;
     }
 }
