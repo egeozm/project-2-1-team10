@@ -19,7 +19,7 @@ public final class AnnDatasetGenerator {
 
     public static void main(String[] args) throws Exception {
         File outDir = new File(argOr(args, 0, "ann_data"));
-        int games = intArgOr(args, 1, 5_000);
+        int games = intArgOr(args, 1, 1_000);
         long seed = longArgOr(args, 2, System.nanoTime());
 
         // Teacher config
@@ -33,11 +33,11 @@ public final class AnnDatasetGenerator {
         String teacher = argOr(args, 9, "expecti").toLowerCase(); // expecti | mcts
 
         // MCTS params (used only if teacher=mcts)
-        int mctsIterations = intArgOr(args, 10, 200_000);
-        double mctsC = doubleArgOr(args, 11, 0.35);
+        int mctsIterations = intArgOr(args, 10, 100_000_000);
+        double mctsC = doubleArgOr(args, 11, 0.25);
         int mctsRolloutMax = intArgOr(args, 12, 10);
         double mctsDpwK = doubleArgOr(args, 13, 25.0);
-        double mctsDpwAlpha = doubleArgOr(args, 14, 0.5);
+        double mctsDpwAlpha = doubleArgOr(args, 14, 0.3);
         long mctsTimeMs = longArgOr(args, 15, 200);
 
         if (!outDir.exists() && !outDir.mkdirs()) {
@@ -46,6 +46,16 @@ public final class AnnDatasetGenerator {
 
         File rollFile = new File(outDir, "roll_stop.bin");
         File pairFile = new File(outDir, "move_pairs.bin");
+
+        // Avoid overwriting existing datasets: if files exist, append a timestamp suffix.
+        if (rollFile.exists() || pairFile.exists()) {
+            String suffix = "_" + System.currentTimeMillis();
+            rollFile = new File(outDir, "roll_stop" + suffix + ".bin");
+            pairFile = new File(outDir, "move_pairs" + suffix + ".bin");
+            System.out.println("Output files already exist; using suffixed names:");
+            System.out.println("- roll: " + rollFile.getAbsolutePath());
+            System.out.println("- moves: " + pairFile.getAbsolutePath());
+        }
 
         System.out.println("ANN dataset generation");
         System.out.println("- outDir: " + outDir.getAbsolutePath());

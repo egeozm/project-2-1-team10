@@ -159,11 +159,11 @@ public final class SimulationDemoANN {
             // Defaults roughly aligned with SimulationTerminal presets
             this.mcts = new MCTSPlayer(
                 rng,
-                200_000,   // maxIterations cap
-                0.35,      // exploration C
+                1_000_000,   // maxIterations cap
+                0.25,      // exploration C
                 10,        // rollout max
                 25.0,      // dpwK
-                0.5,       // dpwAlpha
+                0.3,       // dpwAlpha
                 200        // time budget ms (soft cap)
             );
         }
