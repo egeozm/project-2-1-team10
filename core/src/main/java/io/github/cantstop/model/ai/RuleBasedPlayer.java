@@ -50,35 +50,35 @@ public final class RuleBasedPlayer implements IPlayerController {
     @Override
     public Move selectMove(GameState state, List<Move> legalMoves) {
 
-//        Set<Integer> availableSums = new HashSet<>();
-//        int[][] pairings = roll.pairings();
-//        for (int i = 0; i < 3; i++) {
-//            availableSums.add(pairings[i][0]);
-//            availableSums.add(pairings[i][1]);
-//        }
-//
-//        // made up priorities
-//        int[] priority1 = {7};
-//        int[] priority2 = {8, 6};
-//        int[] priority3 = {5, 9};
-//        int[] priority4 = {4,10};
-//        int[] priority5 = {3,11};
-//        int[] priority6 = {2,12};
-//
-//        int[][] priorities = {priority1, priority2, priority3, priority4, priority5, priority6};
-//
-//        // pick first legal move that matches the priorities
-//        for (int[] group : priorities) {
-//            for (int sum : group) {
-//                if (!availableSums.contains(sum)) continue;
-//
-//                for (Move m : legalMoves) {
-//                    if (m.sumA() == sum || m.sumB() == sum) {
-//                        return m;
-//                    }
-//                }
-//            }
-//        }
+        Set<Integer> availableSums = new HashSet<>();
+        int[][] pairings = state.getLastRoll().pairings();
+        for (int i = 0; i < 3; i++) {
+            availableSums.add(pairings[i][0]);
+            availableSums.add(pairings[i][1]);
+        }
+
+        // made up priorities
+        int[] priority1 = {7};
+        int[] priority2 = {8, 6};
+        int[] priority3 = {5, 9};
+        int[] priority4 = {4,10};
+        int[] priority5 = {3,11};
+        int[] priority6 = {2,12};
+
+        int[][] priorities = {priority1, priority2, priority3, priority4, priority5, priority6};
+
+        // pick first legal move that matches the priorities
+        for (int[] group : priorities) {
+            for (int sum : group) {
+                if (!availableSums.contains(sum)) continue;
+
+                for (Move m : legalMoves) {
+                    if (m.sumA() == sum || m.sumB() == sum) {
+                        return m;
+                    }
+                }
+            }
+        }
 
         return legalMoves.get(0);
     }
