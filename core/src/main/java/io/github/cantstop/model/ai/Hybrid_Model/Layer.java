@@ -47,11 +47,19 @@ public class Layer {
 
     public String exportLayer() {
         StringBuilder sb = new StringBuilder();
-        for (double[] row : weights) {
-            for (double w : row) sb.append(w).append(",");
+        for (int i = 0; i < weights.length; i++) {
+            for (int j = 0; j < weights[i].length; j++) {
+                sb.append(weights[i][j]);
+                if (i != weights.length - 1 || j != weights[i].length - 1) sb.append(",");
+            }
         }
         sb.append("\n");
-        for (double b : biases) sb.append(b).append(",");
+
+        for (int i = 0; i < biases.length; i++) {
+            sb.append(biases[i]);
+            if (i != biases.length - 1) sb.append(",");
+        }
+        sb.append("\n");
         return sb.toString();
     }
 
