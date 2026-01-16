@@ -4,6 +4,7 @@ import io.github.cantstop.model.*;
 
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
+import io.github.cantstop.model.ai.AI_Expectiminimax.BustTable;
 
 /*
  * Open loop MCTS for Can't Stop compatible with your API
@@ -172,8 +173,11 @@ public final class MCTSPlayer {
             return score;
         }
         // usually ROLL over STOP to keep exploring
-        if (a.isRoll()) return 5;
-        return 1; // STOP
+        //if (a.isRoll()) return 5;
+        //return 1; // STOP
+        // Don't hard-bias roll vs stop; let lookaheadHeuristic decide.
+        return 0;
+
     }
 
     private boolean closesColumn(GameState s, Move mv) {
@@ -264,28 +268,55 @@ public final class MCTSPlayer {
         return Heuristics.normalize01(h);
     }
 
-    // –– rollout policies ––
+    private double computeBustChance(GameState s) {
+        int mask = allowedSumsMask(s);
+        return BustTable.P[mask];
+    }
 
-    private boolean policyShouldStop(GameState s) {
-        Player p = s.getCurrentPlayer();
-
-        int active = 0;
-        int gain = 0;
-
-        for (int col = 0; col < GameConstants.NUM_COLS; col++) {
-            int g = tempGainThisTurn(s, col, p);
-            if (g > 0) {
-                active++;
-                gain += g;
+    private int allowedSumsMask(GameState s) {
+        int mask = 0;
+        for (int sum = GameConstants.COL_MIN; sum <= GameConstants.COL_MAX; sum++) {
+            if (TurnManager.isSinglePlayable(s, sum)) {
+                mask |= (1 << (sum - 2));
             }
         }
-
-
-
-        if (active >= 3 && gain >= 5) return true;
-        if (active >= 2 && gain >= 6) return true;
-        return false;
+        return mask;
     }
+
+    private double computeProgressValue(GameState state) {
+        double progressValue = 0.0;
+        Player p = state.getCurrentPlayer();
+
+        for (int col = 0; col < GameConstants.NUM_COLS; col++) {
+            int gain = Math.max(state.tempAtCol(col) - state.getMarkerHeight(p, col), 0);
+            progressValue += (double) gain / GameConstants.maxHeight(GameConstants.columnToSum(col));
+        }
+
+        return progressValue / GameConstants.NUM_COLS;
+    }
+
+
+
+    // –– rollout policies ––
+
+    // Tunable weights (like RuleBased). Higher PROGRESS_W => stop earlier after banking something.
+    private static final double STOP_PROGRESS_W = 9.0;
+    private static final double STOP_BUST_W     = 1.0;
+
+    // Optional: don't stop if we literally gained
+    private static final double MIN_PROGRESS_TO_CONSIDER_STOP = 0.01;
+
+    private boolean policyShouldStop(GameState s) {
+        if (s.countActiveColumns() == 0) return false; // can't stop meaningfully
+
+        double bust = computeBustChance(s);         // 0..1
+        double prog = computeProgressValue(s);      // 0..0.28 /11-ish scaled
+
+        if (prog < MIN_PROGRESS_TO_CONSIDER_STOP) return false;
+
+        return prog * STOP_PROGRESS_W + bust * STOP_BUST_W > 1.0;
+    }
+
 
 
     private Move policyChooseMove(List<Move> legal, GameState s) {
