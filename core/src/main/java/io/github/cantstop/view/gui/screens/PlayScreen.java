@@ -177,7 +177,7 @@ public class PlayScreen implements Screen {
         switch (type) {
 
             case RULE_BASED -> {
-                return new io.github.cantstop.model.ai.RuleBasedPlayer(aiRng, 7f, 2f);
+                return new io.github.cantstop.model.ai.RuleBasedPlayer(aiRng, 9f, 1f);
             }
 
             case MCTS -> {
@@ -186,6 +186,17 @@ public class PlayScreen implements Screen {
                 double C = 0.35;
                 double dpwK = 25.0;
                 double dpwAlpha = 0.5;
+
+                if (timeMs >= 200) {        // HARD
+                    rolloutMax = 7;
+                    C = 0.25;
+                    dpwAlpha = 0.3;
+                } else if (timeMs >= 50) {  // MED
+                    rolloutMax = 8;
+                } else {                    // EASY
+                    rolloutMax = 8;
+                }
+
 
                 MCTSPlayer mcts = new MCTSPlayer(
                     aiRng, maxIters, C, rolloutMax, dpwK, dpwAlpha, timeMs

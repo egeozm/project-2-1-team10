@@ -137,4 +137,39 @@ public final class GameState {
         return gs;
     }
 
+    public boolean wouldLockAnyColumnOnStop() {
+        Player p = currentPlayer;
+        for (int col = 0; col < GameConstants.NUM_COLS; col++) {
+            int temp = tempRunners[col];
+            if (temp == 0) continue;
+
+            int sum = GameConstants.columnToSum(col);
+            int max = GameConstants.maxHeight(sum);
+            int perm = getMarkerHeight(p, col);
+
+            if (Math.max(perm, temp) >= max && perm < max) return true;
+        }
+        return false;
+    }
+
+    public boolean wouldWinOnStop() {
+        Player p = currentPlayer;
+        int count = 0;
+
+        for (int col = 0; col < GameConstants.NUM_COLS; col++) {
+            int sum = GameConstants.columnToSum(col);
+            int max = GameConstants.maxHeight(sum);
+
+            int perm = getMarkerHeight(p, col);
+            int temp = tempRunners[col];
+            int finalH = (temp == 0) ? perm : Math.max(perm, temp);
+
+            if (finalH >= max) {
+                count++;
+                if (count >= GameConstants.TO_WIN) return true;
+            }
+        }
+        return false;
+    }
+
 }

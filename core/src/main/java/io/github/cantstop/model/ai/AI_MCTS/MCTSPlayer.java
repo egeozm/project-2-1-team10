@@ -45,6 +45,13 @@ public final class MCTSPlayer {
 
     /* Decide an action STOP ROLL or MOVE for the current phase */
     public MctsAction decide(GameState rootState) {
+        // HARD SAFETY: if STOP is available and our stop-policy says stop, do it immediately.
+// This makes GUI behavior human-like (prevents endless rolling).
+        if (rootState.getTurnPhase() == TurnPhase.ROLL_OR_STOP
+            && rootState.countActiveColumns() > 0
+            && policyShouldStop(rootState)) {
+            return MctsAction.stop();
+        }
         final Player rootPlayer = rootState.getCurrentPlayer();
         final List<MctsAction> rootActions = legalActionsFrom(rootState, null);
         final Node root = new Node(null, Node.Type.DECISION, rootPlayer, rootActions);
@@ -246,18 +253,38 @@ public final class MCTSPlayer {
                 } else {
                     rollsLeft--;
                     DiceRoll dr = TurnManager.roll(s, rng);
+
+                    s.setLastRoll(dr);
+
                     List<Move> legal = TurnManager.getLegalMoves(s, dr);
                     if (legal.isEmpty()) {
                         TurnManager.bust(s);
+                        s.setLastRoll(null);
                         continue;
                     }
+
                     TurnManager.noBust(s);
                     Move m = policyChooseMove(legal, s);
                     TurnManager.applyMove(s, m);
+                    s.setLastRoll(null);
                 }
-            } else {
-                // in practice this path is rare because CHOOSE_MOVE follows ROLL with no bust
-                TurnManager.stop(s);
+            } else { // CHOOSE_MOVE
+                DiceRoll lr = s.getLastRoll();
+                if (lr == null) {
+                    TurnManager.stop(s);
+                    continue;
+                }
+
+                List<Move> legal = TurnManager.getLegalMoves(s, lr);
+                if (legal.isEmpty()) {
+                    TurnManager.bust(s);
+                    s.setLastRoll(null);
+                    continue;
+                }
+
+                Move m = policyChooseMove(legal, s);
+                TurnManager.applyMove(s, m);
+                s.setLastRoll(null);
             }
         }
 
@@ -267,6 +294,7 @@ public final class MCTSPlayer {
         double h = Heuristics.evaluate(s, root);
         return Heuristics.normalize01(h);
     }
+
 
     private double computeBustChance(GameState s) {
         int mask = allowedSumsMask(s);
@@ -288,35 +316,134 @@ public final class MCTSPlayer {
         Player p = state.getCurrentPlayer();
 
         for (int col = 0; col < GameConstants.NUM_COLS; col++) {
-            int gain = Math.max(state.tempAtCol(col) - state.getMarkerHeight(p, col), 0);
-            progressValue += (double) gain / GameConstants.maxHeight(GameConstants.columnToSum(col));
+            int temp = state.tempAtCol(col);
+            int perm = state.getMarkerHeight(p, col);
+            int gain = Math.max(temp - perm, 0);
+            int sum = GameConstants.columnToSum(col);
+            int maxH = GameConstants.maxHeight(sum);
+
+            progressValue += (double) gain / (double) maxH;
         }
 
         return progressValue / GameConstants.NUM_COLS;
     }
 
 
+    private double computeMaxColumnFrac(GameState state) {
+        Player p = state.getCurrentPlayer();
+        double best = 0.0;
+
+        for (int col = 0; col < GameConstants.NUM_COLS; col++) {
+            int temp = state.tempAtCol(col);
+            if (temp == 0) continue;
+
+            int sum = GameConstants.columnToSum(col);
+            int maxH = GameConstants.maxHeight(sum);
+            int perm = state.getMarkerHeight(p, col);
+            int gain = Math.max(temp - perm, 0);
+
+            best = Math.max(best, (double) gain / (double) maxH);
+        }
+        return best;
+    }
+
+
+    private boolean wouldLockAnyColumnOnStop(GameState s) {
+        Player p = s.getCurrentPlayer();
+
+        for (int col = 0; col < GameConstants.NUM_COLS; col++) {
+            int temp = s.tempAtCol(col);
+            if (temp == 0) continue;
+
+            int sum  = GameConstants.columnToSum(col);
+            int maxH = GameConstants.maxHeight(sum);
+
+            if (temp >= maxH && s.getMarkerHeight(p, col) < maxH) {
+                return true;
+            }
+        }
+        return false;
+    }
+
 
     // –– rollout policies ––
 
-    // Tunable weights (like RuleBased). Higher PROGRESS_W => stop earlier after banking something.
-    private static final double STOP_PROGRESS_W = 9.0;
-    private static final double STOP_BUST_W     = 1.0;
 
-    // Optional: don't stop if we literally gained
-    private static final double MIN_PROGRESS_TO_CONSIDER_STOP = 0.01;
+    private static final double STOP_PROGRESS_W = 7.0;
+    private static final double STOP_BUST_W     = 2.0;
+    private static final double MIN_PROGRESS_TO_CONSIDER_STOP = 0.02;
 
     private boolean policyShouldStop(GameState s) {
-        if (s.countActiveColumns() == 0) return false; // can't stop meaningfully
+        if (s.countActiveColumns() == 0) return false;
 
-        double bust = computeBustChance(s);         // 0..1
-        double prog = computeProgressValue(s);      // 0..0.28 /11-ish scaled
+        if (wouldWinOnStop(s)) return true;
+        if (wouldCompleteAnyColumnOnStop(s)) return true;
+
+        double bust = computeBustChance(s);     // 0..1
+        double prog = computeProgressValue(s);  // ~0..0.27
 
         if (prog < MIN_PROGRESS_TO_CONSIDER_STOP) return false;
 
         return prog * STOP_PROGRESS_W + bust * STOP_BUST_W > 1.0;
     }
 
+
+
+    private double maxProgressFractionThisTurn(GameState s) {
+        Player p = s.getCurrentPlayer();
+        double best = 0.0;
+
+        for (int col = 0; col < GameConstants.NUM_COLS; col++) {
+            int temp = s.tempAtCol(col);
+            if (temp == 0) continue;
+
+            int perm = s.getMarkerHeight(p, col);
+            int gain = Math.max(0, temp - perm);
+            int sum = GameConstants.columnToSum(col);
+            int maxH = GameConstants.maxHeight(sum);
+
+            double frac = (maxH == 0) ? 0.0 : (gain / (double) maxH);
+            if (frac > best) best = frac;
+        }
+        return best;
+    }
+
+
+
+    private boolean wouldCompleteAnyColumnOnStop(GameState s) {
+        Player p = s.getCurrentPlayer();
+        for (int col = 0; col < GameConstants.NUM_COLS; col++) {
+            int temp = s.tempAtCol(col);
+            if (temp == 0) continue;
+
+            int perm = s.getMarkerHeight(p, col);
+            if (temp <= perm) continue;
+
+            int sum = GameConstants.columnToSum(col);
+            int maxH = GameConstants.maxHeight(sum);
+
+            if (temp >= maxH) return true;
+        }
+        return false;
+    }
+
+    private boolean wouldWinOnStop(GameState s) {
+        Player p = s.getCurrentPlayer();
+        int count = 0;
+
+        for (int col = 0; col < GameConstants.NUM_COLS; col++) {
+            int sum = GameConstants.columnToSum(col);
+            int maxH = GameConstants.maxHeight(sum);
+
+            int perm = s.getMarkerHeight(p, col);
+            int temp = s.tempAtCol(col);
+
+            if (perm >= maxH) { count++; continue; }
+
+            if (temp > perm && temp >= maxH) count++;
+        }
+        return count >= GameConstants.TO_WIN;
+    }
 
 
     private Move policyChooseMove(List<Move> legal, GameState s) {
@@ -353,35 +480,47 @@ public final class MCTSPlayer {
 
     private MctsAction bestActionAtRoot(Node root) {
         MctsAction bestA = null;
-        Node bestN = null;
+        double bestMean = Double.NEGATIVE_INFINITY;
+        int bestVisits = -1;
+
         for (Map.Entry<MctsAction, Node> e : root.children.entrySet()) {
             Node n = e.getValue();
-            boolean takeByVisits = bestN == null || n.visits > bestN.visits;
-            boolean tieBreakByMean = bestN != null && n.visits == bestN.visits && n.mean() > bestN.mean();
-            if (takeByVisits || tieBreakByMean) {
-                bestN = n;
+            double m = n.mean();
+
+            if (m > bestMean) {
+                bestMean = m;
+                bestVisits = n.visits;
                 bestA = e.getKey();
+            } else if (m == bestMean) {
+
+                if (n.visits > bestVisits) {
+                    bestVisits = n.visits;
+                    bestA = e.getKey();
+                }
             }
         }
-        if (bestA == null && !root.untried.isEmpty()) {
-            return root.untried.get(0);
-        }
-        if (bestA != null) {
-            return bestA;
-        } else {
-            return MctsAction.roll();
-        }
+
+        if (bestA == null && !root.untried.isEmpty()) return root.untried.get(0);
+        return (bestA != null) ? bestA : MctsAction.roll();
     }
+
 
     // ---------------- Game helpers ----------------
 
     private List<MctsAction> legalActionsFrom(GameState s, DiceRoll lastRoll) {
         if (s.getTurnPhase() == TurnPhase.ROLL_OR_STOP) {
             boolean canStop = s.countActiveColumns() > 0;
-            return canStop
-                ? Arrays.asList(MctsAction.stop(), MctsAction.roll())
-                : Collections.singletonList(MctsAction.roll());
-        }else {
+
+            if (!canStop) {
+                return Collections.singletonList(MctsAction.roll());
+            }
+
+            if (wouldLockAnyColumnOnStop(s)) {
+                return Collections.singletonList(MctsAction.stop());
+            }
+
+            return Arrays.asList(MctsAction.stop(), MctsAction.roll());
+        } else {
             // CHOOSE_MOVE requires last roll from the previous ROLL
             if (lastRoll == null) {
                 return Collections.emptyList();
@@ -392,6 +531,10 @@ public final class MCTSPlayer {
             return out;
         }
     }
+
+
+
+
 
     private boolean isTerminal(GameState s) {
         return TurnManager.checkWinCondition(s, Player.RED)
@@ -410,17 +553,21 @@ public final class MCTSPlayer {
             }
             case ROLL -> {
                 DiceRoll dr = TurnManager.roll(s, rng);
+                s.setLastRoll(dr);
+
                 List<Move> legal = TurnManager.getLegalMoves(s, dr);
                 if (legal.isEmpty()) {
                     TurnManager.bust(s);
+                    s.setLastRoll(null);
                     return new StepResult(isTerminal(s), null);
                 } else {
-                    TurnManager.noBust(s);          // transition to CHOOSE_MOVE
+                    TurnManager.noBust(s);
                     return new StepResult(isTerminal(s), dr);
                 }
             }
             case MOVE -> {
                 TurnManager.applyMove(s, a.move);
+                s.setLastRoll(null);
                 return new StepResult(isTerminal(s), null);
             }
         }
@@ -531,6 +678,8 @@ public final class MCTSPlayer {
         int perm = s.getMarkerHeight(p, col);
         return Math.max(0, temp - perm);
     }
+
+
 
     private int dpwLimit(int visits) {
         if (dpwK <= 0.0) return Integer.MAX_VALUE;
