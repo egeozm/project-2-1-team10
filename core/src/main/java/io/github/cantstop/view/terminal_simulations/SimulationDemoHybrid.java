@@ -11,9 +11,9 @@ public final class SimulationDemoHybrid {
 
     public static void main(String[] args) {
         // Parameters: 1. Games, 2. Seed, 3. Verbose
-        int games = argOr(args, 0, 1);
+        int games = argOr(args, 0, 30);
         long seed = argOr(args, 1, System.nanoTime());
-        boolean verbose = boolOr(args, 2, true);
+        boolean verbose = boolOr(args, 2, false);
 
         Random diceRng = new Random(seed);
 
