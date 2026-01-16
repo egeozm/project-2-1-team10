@@ -1,6 +1,7 @@
-# ANN Agent Guide (Expectiminimax/MCTS Imitation, No CSV)
+# ANN Agent Guide (Expectiminimax/MCTS Imitation)
 
-This ANN is a small, fast policy that learns from a search-based teacher (Expectiminimax or MCTS) and then plays on its own (no search at runtime). All training data comes from simulated self-play via `AnnDatasetGenerator` (no CSV flow).
+This ANN is a small, fast policy that learns from a search-based teacher (Expectiminimax or MCTS) and then plays on its own (no search at runtime). All training data comes from simulated self-play via `AnnDatasetGenerator`.
+
 
 ## Architecture
 - Trunk: 49 inputs → 128 → 64 (ReLU)
@@ -75,11 +76,10 @@ Against similarly configured MCTS, expect ~50% (the ANN is imitating that policy
 - Demo sim: `SimulationDemoANN.java`
 
 ## Notes
-- CSV training is not used here (no move supervision in CSV).
 - Bust probability is computed only in the binary pipeline.
 - Perspective is always “current player” (me vs opp) in feature extraction.
 - Data files are recreated per run; existing names get a timestamp suffix.
-# ANN Agent Guide (Expectiminimax/MCTS Imitation, No CSV)
+# ANN Agent Guide (Expectiminimax/MCTS Imitation)
 
 This ANN is a small, fast policy that learns from a search-based teacher (Expectiminimax or MCTS) and then plays on its own (no search at runtime). CSV training is not used here; all training data comes from simulated self-play via `AnnDatasetGenerator`.
 
