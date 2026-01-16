@@ -35,9 +35,9 @@ public class PlayScreen implements Screen {
 
     // RNG split:
     // - diceRng: ONLY for dice rolls in real game (GameController)
-    // - aiRng:   ONLY for AI randomness (rollouts, tie-breaks, etc.)
+    // - aiRng: ONLY for AI randomness (rollouts, tie-breaks, etc.)
     private final Random diceRng = new Random();
-    private final Random aiRng   = new Random();
+    private final Random aiRng = new Random();
 
     private BoardRenderer boardRenderer;
     private DiceRenderer diceRenderer;
@@ -62,15 +62,15 @@ public class PlayScreen implements Screen {
     private boolean gameOver = false;
 
     public PlayScreen(Main game) {
-        this(game, null); //pvp
+        this(game, null); // pvp
     }
 
-    public PlayScreen(Main game , AiConfig config) {
+    public PlayScreen(Main game, AiConfig config) {
 
         this.game = game;
         this.config = config;
 
-        this.vsAI= (config != null);
+        this.vsAI = (config != null);
 
         // ----------------------------------
         // initialize backend
@@ -84,24 +84,24 @@ public class PlayScreen implements Screen {
         if (vsAI) {
 
             // “research-like” params (you can later wire these to settings)
-            //int maxIters = 1_000_000;
-           // long timeMs = 50;          // GUI-friendly (20–100ms); use 200ms only if you accept lag
-          //  int rolloutMax = 10;
-          //  double C = 0.35;
-           // double dpwK = 25.0;
-          //  double dpwAlpha = 0.5;
+            // int maxIters = 1_000_000;
+            // long timeMs = 50; // GUI-friendly (20–100ms); use 200ms only if you accept
+            // lag
+            // int rolloutMax = 10;
+            // double C = 0.35;
+            // double dpwK = 25.0;
+            // double dpwAlpha = 0.5;
 
-          //  MCTSPlayer mcts = new MCTSPlayer(
-           //     aiRng, maxIters, C, rolloutMax, dpwK, dpwAlpha, timeMs
-          //  );
+            // MCTSPlayer mcts = new MCTSPlayer(
+            // aiRng, maxIters, C, rolloutMax, dpwK, dpwAlpha, timeMs
+            // );
 
-          //  playerRed = new MctsControllerAdapter(mcts);
+            // playerRed = new MctsControllerAdapter(mcts);
             playerRed = buildAiController(config);
 
         } else {
             playerRed = humanController;
         }
-
 
         // IMPORTANT: pass diceRng to GameController (dice only)
         controller = new GameController(gameState, playerRed, playerBlue, diceRng);
@@ -111,13 +111,11 @@ public class PlayScreen implements Screen {
         // ----------------------------------
 
         // initialize font
-        FreeTypeFontGenerator generator =
-            new FreeTypeFontGenerator(Gdx.files.internal("fonts/pixel_font.ttf"));
+        FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/pixel_font.ttf"));
 
-        FreeTypeFontGenerator.FreeTypeFontParameter params =
-            new FreeTypeFontGenerator.FreeTypeFontParameter();
+        FreeTypeFontGenerator.FreeTypeFontParameter params = new FreeTypeFontGenerator.FreeTypeFontParameter();
 
-        params.size = 12; // recommended sizes are 12 and 24
+        params.size = 8; // recommended sizes are 12 and 24
         params.mono = true;
         params.minFilter = Texture.TextureFilter.Nearest;
         params.magFilter = Texture.TextureFilter.Nearest;
@@ -129,7 +127,7 @@ public class PlayScreen implements Screen {
 
         font = generator.generateFont(params);
 
-        params.size = 12;
+        params.size = 16;
         buttonFont = generator.generateFont(params);
 
         generator.dispose();
@@ -145,6 +143,7 @@ public class PlayScreen implements Screen {
 
         // create buttons
         rollButton = new TextButton("Roll", borderStyle);
+        rollButton.padTop(20f);
         rollButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
@@ -153,6 +152,7 @@ public class PlayScreen implements Screen {
         });
 
         stopButton = new TextButton("Stop", borderStyle);
+        stopButton.padTop(20f);
         stopButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
@@ -161,6 +161,7 @@ public class PlayScreen implements Screen {
         });
 
         menuButton = new TextButton("Menu", borderStyle);
+        menuButton.padTop(20f);
         menuButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
@@ -187,27 +188,24 @@ public class PlayScreen implements Screen {
                 double dpwK = 25.0;
                 double dpwAlpha = 0.5;
 
-                if (timeMs >= 200) {        // HARD
+                if (timeMs >= 200) { // HARD
                     rolloutMax = 7;
                     C = 0.25;
                     dpwAlpha = 0.3;
-                } else if (timeMs >= 50) {  // MED
+                } else if (timeMs >= 50) { // MED
                     rolloutMax = 8;
-                } else {                    // EASY
+                } else { // EASY
                     rolloutMax = 8;
                 }
 
-
                 MCTSPlayer mcts = new MCTSPlayer(
-                    aiRng, maxIters, C, rolloutMax, dpwK, dpwAlpha, timeMs
-                );
+                        aiRng, maxIters, C, rolloutMax, dpwK, dpwAlpha, timeMs);
 
                 return new io.github.cantstop.controller.MctsControllerAdapter(mcts);
             }
 
-
             case MINIMAX -> {
-                //adapter for expectiminimax like the one we use for mcts?
+                // adapter for expectiminimax like the one we use for mcts?
                 throw new IllegalStateException("minimax adapter ");
             }
         }
@@ -251,7 +249,8 @@ public class PlayScreen implements Screen {
     }
 
     private void advanceGame() {
-        if (waitingForAnimation) return;
+        if (waitingForAnimation)
+            return;
 
         Event event = controller.update();
         handleEvent(event);
@@ -267,7 +266,8 @@ public class PlayScreen implements Screen {
 
             if (gameState.getTurnPhase() == TurnPhase.CHOOSE_MOVE) {
 
-                moveButtonRenderer.showMoveButtons(TurnManager.getLegalMoves(gameState, gameState.getLastRoll()), stage);
+                moveButtonRenderer.showMoveButtons(TurnManager.getLegalMoves(gameState, gameState.getLastRoll()),
+                        stage);
 
             } else {
                 boolean canStop = gameState.countActiveColumns() > 0;
@@ -308,7 +308,7 @@ public class PlayScreen implements Screen {
             public void run() {
 
                 if (event.isBust()) {
-                    popupRenderer.showPopup(gameState.getCurrentPlayer() + "BUSTED", 1.2f);
+                    popupRenderer.showPopup(gameState.getCurrentPlayer() + "\nBUSTED", 1.4f);
                     Timer.schedule(new Timer.Task() {
                         @Override
                         public void run() {
@@ -326,7 +326,7 @@ public class PlayScreen implements Screen {
 
     private void playAnimationFor(StopEvent event, Runnable onDone) {
 
-        //        diceRenderer.stopAnimation(1f);
+        // diceRenderer.stopAnimation(1f);
 
         Timer.schedule(new Timer.Task() {
             @Override
@@ -340,7 +340,7 @@ public class PlayScreen implements Screen {
 
     private void playAnimationFor(MoveEvent event, Runnable onDone) {
 
-        //        diceRenderer.MoveAnimation(1f);
+        // diceRenderer.MoveAnimation(1f);
 
         Timer.schedule(new Timer.Task() {
             @Override
@@ -354,7 +354,7 @@ public class PlayScreen implements Screen {
 
     private void playAnimationFor(GameOverEvent event, Runnable onDone) {
 
-        popupRenderer.showPopup( event.getWinner() + " WINS", 1.2f);
+        popupRenderer.showPopup(event.getWinner() + "\nWINS", 5f);
 
     }
 
@@ -409,7 +409,7 @@ public class PlayScreen implements Screen {
     public void dispose() {
         stage.dispose();
         font.dispose();
-        //        postProcessor.dispose();
+        // postProcessor.dispose();
         if (game.assets != null) {
             game.assets.dispose();
         }

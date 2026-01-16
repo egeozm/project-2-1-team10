@@ -1,6 +1,5 @@
 package io.github.cantstop.view.gui;
 
-
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
@@ -10,13 +9,16 @@ import com.badlogic.gdx.audio.Music;
 import io.github.cantstop.view.gui.screens.MenuScreen;
 import io.github.cantstop.view.gui.screens.PlayScreen;
 
-/** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
+/**
+ * {@link com.badlogic.gdx.ApplicationListener} implementation shared by all
+ * platforms.
+ */
 public class Main extends Game {
 
     public FitViewport viewport;
     public SpriteBatch batch;
-//    public ShaderProgram shaderProgram;
-//    public FrameBuffer fbo;
+    // public ShaderProgram shaderProgram;
+    // public FrameBuffer fbo;
     public PostProcessor postProcessor;
     public BitmapFont font;
     public GameAssets assets;
@@ -30,28 +32,30 @@ public class Main extends Game {
         font = new BitmapFont();
         viewport = new FitViewport(560, 320);
 
-//        //set shaders
-//        String vertexShader = Gdx.files.internal("shaders/vertex.glsl").readString();
-//        String fragmentShader = Gdx.files.internal("shaders/fragment.glsl").readString();
-//        shaderProgram = new ShaderProgram(vertexShader, fragmentShader);
-//        if (!shaderProgram.isCompiled()) {
-//            throw new IllegalStateException(shaderProgram.getLog());
-//        }
+        // //set shaders
+        // String vertexShader = Gdx.files.internal("shaders/vertex.glsl").readString();
+        // String fragmentShader =
+        // Gdx.files.internal("shaders/fragment.glsl").readString();
+        // shaderProgram = new ShaderProgram(vertexShader, fragmentShader);
+        // if (!shaderProgram.isCompiled()) {
+        // throw new IllegalStateException(shaderProgram.getLog());
+        // }
 
         postProcessor = new PostProcessor(batch, viewport);
-//        shaderProgram.pedantic = false; // not sure what this does
-//        batch.setShader(shaderProgram);
-//
-//        fbo = new FrameBuffer(Pixmap.Format.RGBA8888, 560, 320, false);
+        // shaderProgram.pedantic = false; // not sure what this does
+        // batch.setShader(shaderProgram);
+        //
+        // fbo = new FrameBuffer(Pixmap.Format.RGBA8888, 560, 320, false);
 
-        //font has 15pt, but we need to scale it to our viewport by ratio of viewport height to screen height
+        // font has 15pt, but we need to scale it to our viewport by ratio of viewport
+        // height to screen height
         font.setUseIntegerPositions(false);
         font.getData().setScale(viewport.getWorldHeight() / Gdx.graphics.getHeight());
 
         this.assets = new GameAssets();
         assets.loadAll();
 
-        //music
+        // music
         mainMenuMusic = Gdx.audio.newMusic(Gdx.files.internal("music/mainMenuMusic.mp3"));
         mainMenuMusic.setLooping(true);
         mainMenuMusic.play();
@@ -60,14 +64,14 @@ public class Main extends Game {
     }
 
     public void startGame() {
-        if(mainMenuMusic.isPlaying()){
+        if (mainMenuMusic.isPlaying()) {
             mainMenuMusic.stop();
         }
         setScreen(new PlayScreen(this));
     }
 
     public void startGame(AiConfig config) {
-        if(mainMenuMusic.isPlaying()){
+        if (mainMenuMusic.isPlaying()) {
             mainMenuMusic.stop();
         }
         setScreen(new PlayScreen(this, config));
@@ -95,8 +99,7 @@ public class Main extends Game {
         font.dispose();
         screen.dispose();
         postProcessor.dispose();
-        if(mainMenuMusic != null)
+        if (mainMenuMusic != null)
             mainMenuMusic.dispose();
     }
 }
-

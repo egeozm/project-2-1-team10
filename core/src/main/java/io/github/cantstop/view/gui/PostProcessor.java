@@ -19,31 +19,26 @@ public class PostProcessor {
         this.batch = sharedBatch;
 
         frameBuffer = new FrameBuffer(
-            Pixmap.Format.RGBA8888,
-            (int) viewport.getWorldWidth(),
-            (int) viewport.getWorldHeight(),
-            false
-        );
+                Pixmap.Format.RGBA8888,
+                (int) viewport.getWorldWidth(),
+                (int) viewport.getWorldHeight(),
+                false);
 
         System.out.println(viewport.getWorldWidth() + "   " + viewport.getWorldHeight());
 
         frameBuffer.getColorBufferTexture().setFilter(
-            Texture.TextureFilter.Nearest,
-            Texture.TextureFilter.Nearest
-        );
-
+                Texture.TextureFilter.Nearest,
+                Texture.TextureFilter.Nearest);
 
         ShaderProgram.pedantic = false;
         shader = new ShaderProgram(
-            Gdx.files.internal("shaders/vertex.glsl"),
-            Gdx.files.internal("shaders/fragment.glsl")
-        );
+                Gdx.files.internal("shaders/vertex.glsl"),
+                Gdx.files.internal("shaders/fragment.glsl"));
 
         if (!shader.isCompiled()) {
             throw new IllegalStateException(shader.getLog());
         }
 
-        batch.setShader(shader);
     }
 
     public void begin() {
@@ -56,23 +51,23 @@ public class PostProcessor {
 
         shader.bind();
         shader.setUniformf(
-            "u_resolution",
-            viewport.getWorldWidth()*8,
-            viewport.getWorldHeight()*8
-        );
+                "u_resolution",
+                viewport.getWorldWidth() * 8,
+                viewport.getWorldHeight() * 8);
         shader.setUniformf("u_time", time);
 
         frameBuffer.end();
 
+        batch.setShader(shader);
         batch.begin();
         batch.draw(
-            frameBuffer.getColorBufferTexture(),
-            0, 0,
-            viewport.getWorldWidth(),
-            viewport.getWorldHeight(),
-            0, 0, 1, 1
-        );
+                frameBuffer.getColorBufferTexture(),
+                0, 0,
+                viewport.getWorldWidth(),
+                viewport.getWorldHeight(),
+                0, 0, 1, 1);
         batch.end();
+        batch.setShader(null);
     }
 
     public void dispose() {

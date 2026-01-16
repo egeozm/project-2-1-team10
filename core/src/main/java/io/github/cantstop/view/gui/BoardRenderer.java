@@ -105,15 +105,15 @@ public class BoardRenderer {
     public void drawCurrentPlayer() {
         font.setColor(GuiConstants.textColor);
         font.getData().setScale(1f);
-        font.draw(batch, "Current Player:", 10, 260);
+        font.draw(batch, "Current Player:", 10, 242);
 
-        font.getData().setScale(3f);
+        font.getData().setScale(4f);
         if (gameState.getCurrentPlayer() == Player.RED) {
             font.setColor(GuiConstants.red);
-            font.draw(batch, "RED", 10, 224);
+            font.draw(batch, "RED", 10, 210);
         } else {
             font.setColor(GuiConstants.blue);
-            font.draw(batch, "BLUE", 10, 224);
+            font.draw(batch, "BLUE", 10, 210);
         }
     }
 

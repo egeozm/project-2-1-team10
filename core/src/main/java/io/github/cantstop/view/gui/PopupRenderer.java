@@ -15,8 +15,8 @@ public class PopupRenderer {
     private float remainingTime = 0f;
 
     // position
-    private final float X = 280;
-    private final float Y = 180;
+    private final float X = 190;
+    private final float Y = 130;
 
     public PopupRenderer(SpriteBatch batch, BitmapFont font) {
         this.batch = batch;
@@ -40,15 +40,21 @@ public class PopupRenderer {
     public void draw() {
         if (message == null) return;
 
-        font.setColor(Color.WHITE);
-        font.getData().setScale(4f);
+        font.setColor(GuiConstants.textColor.cpy().mul(1.6f));
+        font.getData().setScale(6f);
 
-        GlyphLayout layout = new GlyphLayout();
-        layout.setText(font, message);
+        // Split the message into lines
+        String[] lines = message.split("\n");
 
-        float x = X - layout.width / 2;
+        float totalHeight = lines.length * font.getLineHeight();
+        float y = Y + totalHeight / 2f; // start from top line
 
-        font.draw(batch, layout, x, Y);
+        for (String line : lines) {
+            GlyphLayout layout = new GlyphLayout(font, line);
+            float x = X - layout.width / 2f; // center each line individually
+            font.draw(batch, layout, x, y);
+            y -= font.getLineHeight(); // move down for next line
+        }
     }
 
     public boolean isActive() {

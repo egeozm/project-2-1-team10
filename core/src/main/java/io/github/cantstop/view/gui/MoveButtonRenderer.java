@@ -1,5 +1,6 @@
 package io.github.cantstop.view.gui;
 
+import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
@@ -52,10 +53,21 @@ public class MoveButtonRenderer {
 
             moveButtons[i].setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
             moveButtons[i].setPosition(ORIGIN_X, ORIGIN_Y - i * GAP_SIZE);
+            moveButtons[i].padTop(20f);
 
             final Move selectedMove = moves.get(i);
 
             moveButtons[i].addListener(new ClickListener() {
+                @Override
+                public void enter(InputEvent event, float x, float y, int pointer, Actor fromActor) {
+
+                }
+
+                @Override
+                public void exit(InputEvent event, float x, float y, int pointer, Actor toActor) {
+
+                }
+
                 @Override
                 public void clicked(InputEvent event, float x, float y) {
                     playScreen.handleMoveInput(selectedMove);
@@ -68,7 +80,8 @@ public class MoveButtonRenderer {
 
     // remove the buttons from the stage
     public void clearMoveButtons() {
-        if (moveButtons == null) return;
+        if (moveButtons == null)
+            return;
 
         for (TextButton b : moveButtons) {
             if (b != null && b.hasParent()) {
@@ -81,16 +94,19 @@ public class MoveButtonRenderer {
 
     // Remove duplicates while preserving the first occurrence and order.
     private List<Move> dedupeMoves(List<Move> moves) {
-        if (moves == null || moves.isEmpty()) return moves;
+        if (moves == null || moves.isEmpty())
+            return moves;
         Map<String, Move> unique = new LinkedHashMap<>();
-        for (Move m : moves) unique.putIfAbsent(formatMove(m), m);
+        for (Move m : moves)
+            unique.putIfAbsent(formatMove(m), m);
         return new ArrayList<>(unique.values());
     }
 
     // Build a canonical key for a move: order doesn't matter (5+8 == 8+5).
     private static String formatMove(Move m) {
         int a = m.sumA(), b = m.sumB();
-        if (a == 0 || b == 0) return Integer.toString(a + b); // single move
+        if (a == 0 || b == 0)
+            return Integer.toString(a + b); // single move
         int x = Math.min(a, b), y = Math.max(a, b);
         return x + "+" + y;
     }
