@@ -44,7 +44,7 @@ public final class SimulationBatchAllAgents {
             int games = intArgOr(args, 2, DEFAULT_GAMES);
             long baseSeed = longArgOr(args, 3, 123L);
             String annWeights = argOr(args, 4, "core/src/main/java/io/github/cantstop/model/ai/AI_ANN/ann_weights_mcts.annw");
-            float annThr = floatArgOr(args, 5, 0.45f);
+            float annThr = floatArgOr(args, 5, 0.55f);
             run = new RunConfig(games, baseSeed, agentAName, agentBName,
                 buildSpec(agentAName, annWeights, annThr),
                 buildSpec(agentBName, annWeights, annThr));
