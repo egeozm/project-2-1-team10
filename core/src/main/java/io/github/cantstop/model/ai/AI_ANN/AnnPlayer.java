@@ -4,6 +4,8 @@ import io.github.cantstop.controller.IPlayerController;
 import io.github.cantstop.model.GameState;
 import io.github.cantstop.model.Move;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.files.FileHandle;
 import java.io.File;
 import java.util.List;
 
@@ -21,7 +23,19 @@ public final class AnnPlayer implements IPlayerController {
      */
     public AnnPlayer(File weightsFile, float rollThreshold) {
         this.rollThreshold = rollThreshold;
-        this.net = tryLoad(weightsFile);
+        AnnNetwork loaded = tryLoad(weightsFile);
+        if (loaded == null && weightsFile != null) {
+            FileHandle fh = Gdx.files.internal(weightsFile.getName());
+            if (fh != null && fh.exists()) {
+                loaded = tryLoad(fh.file());
+            }
+        }
+        this.net = loaded;
+        if (this.net == null) {
+            System.err.println("[ANN] Failed to load weights from " + (weightsFile == null ? "<null>" : weightsFile.getAbsolutePath()) + ". Using fallback (always roll when stop illegal).");
+        } else {
+            System.out.println("[ANN] Loaded weights from " + weightsFile.getAbsolutePath() + " thr=" + rollThreshold);
+        }
     }
 
     private static AnnNetwork tryLoad(File f) {

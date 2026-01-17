@@ -40,7 +40,7 @@ public class AnnConfigScreen implements Screen {
         title.setFontScale(0.8f);
 
         Label weightsLabel = new Label("Weights path:", skin);
-        TextField weightsField = new TextField("core/src/main/java/io/github/cantstop/model/ai/AI_ANN/ann_weights_mcts.annw", skin);
+        TextField weightsField = new TextField("ann_weights_mcts.annw", skin);
 
         Label thrLabel = new Label("Roll threshold (0-1):", skin);
         TextField thrField = new TextField("0.45", skin);

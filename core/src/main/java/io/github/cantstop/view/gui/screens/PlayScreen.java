@@ -224,6 +224,7 @@ public class PlayScreen implements Screen {
                     ? annW
                     : "core/src/main/java/io/github/cantstop/model/ai/AI_ANN/ann_weights_mcts.annw";
                 float thr = (annThr > 0f && annThr < 1f) ? annThr : 0.45f;
+                System.out.println("[GUI] ANN weights=" + defaultWeights + " thr=" + thr);
                 return new AnnPlayer(new File(defaultWeights), thr);
             }
 
