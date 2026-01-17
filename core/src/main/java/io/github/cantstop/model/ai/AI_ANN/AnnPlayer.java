@@ -3,6 +3,7 @@ package io.github.cantstop.model.ai.AI_ANN;
 import io.github.cantstop.controller.IPlayerController;
 import io.github.cantstop.model.GameState;
 import io.github.cantstop.model.Move;
+import io.github.cantstop.model.TurnManager;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
@@ -33,8 +34,6 @@ public final class AnnPlayer implements IPlayerController {
         this.net = loaded;
         if (this.net == null) {
             System.err.println("[ANN] Failed to load weights from " + (weightsFile == null ? "<null>" : weightsFile.getAbsolutePath()) + ". Using fallback (always roll when stop illegal).");
-        } else {
-            System.out.println("[ANN] Loaded weights from " + weightsFile.getAbsolutePath() + " thr=" + rollThreshold);
         }
     }
 
@@ -53,6 +52,13 @@ public final class AnnPlayer implements IPlayerController {
     public Boolean rollOrStop(GameState state) {
         // If there are no active temp runners, stopping is illegal anyway.
         if (state.countActiveColumns() == 0) return true;
+
+        // If stopping now would win, force stop.
+        GameState tmp = state.copy();
+        TurnManager.stop(tmp);
+        if (TurnManager.checkWinCondition(tmp, state.getCurrentPlayer())) {
+            return false; // stop to secure the win
+        }
 
         if (net == null) {
             // Safe default: stop when you have anything to bank ~half the time (very weak, but non-crashing).

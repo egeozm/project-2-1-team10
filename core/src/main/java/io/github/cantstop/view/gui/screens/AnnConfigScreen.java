@@ -43,7 +43,7 @@ public class AnnConfigScreen implements Screen {
         TextField weightsField = new TextField("ann_weights_mcts.annw", skin);
 
         Label thrLabel = new Label("Roll threshold (0-1):", skin);
-        TextField thrField = new TextField("0.45", skin);
+        TextField thrField = new TextField("0.55", skin);
 
         TextButton startBtn = new TextButton("Start", skin);
         TextButton backBtn = new TextButton("Back", skin);
