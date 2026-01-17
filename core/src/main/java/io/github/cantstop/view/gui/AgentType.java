@@ -4,5 +4,7 @@ public enum AgentType {
     RULE_BASED,
     MCTS,
     MINIMAX,
-    MINIMAX_ITERATIVE
+    MINIMAX_ITERATIVE,
+    ANN,
+    HYBRID
 }

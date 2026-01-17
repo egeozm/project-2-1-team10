@@ -10,22 +10,22 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.scenes.scene2d.ui.TextField;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
-
 import io.github.cantstop.view.gui.AgentType;
 import io.github.cantstop.view.gui.AiConfig;
 import io.github.cantstop.view.gui.Main;
 import io.github.cantstop.view.gui.SharedSkin;
 
-public class AiSelectScreen implements Screen {
+public class AnnConfigScreen implements Screen {
 
     private final Main game;
     private Stage stage;
     private Skin skin;
     private Texture background;
 
-    public AiSelectScreen(Main game) {
+    public AnnConfigScreen(Main game) {
         this.game = game;
     }
 
@@ -33,54 +33,37 @@ public class AiSelectScreen implements Screen {
     public void show() {
         stage = new Stage(new ScreenViewport());
         Gdx.input.setInputProcessor(stage);
-
         skin = SharedSkin.getSkin();
         background = new Texture(Gdx.files.internal("backgrounds/menuBackground.png"));
 
-        Label title = new Label("Choose Opponent", skin, "big");
+        Label title = new Label("Configure ANN", skin, "big");
         title.setFontScale(0.8f);
 
-        TextButton ruleBtn = new TextButton("Rule-Based", skin);
-        TextButton mctsBtn = new TextButton("MCTS", skin);
-        TextButton minimaxBtn = new TextButton("ExpectiMiniMax", skin);
-        TextButton annBtn = new TextButton("ANN", skin);
-        TextButton hybridBtn = new TextButton("Hybrid", skin);
+        Label weightsLabel = new Label("Weights path:", skin);
+        TextField weightsField = new TextField("core/src/main/java/io/github/cantstop/model/ai/AI_ANN/ann_weights_mcts.annw", skin);
+
+        Label thrLabel = new Label("Roll threshold (0-1):", skin);
+        TextField thrField = new TextField("0.45", skin);
+
+        TextButton startBtn = new TextButton("Start", skin);
         TextButton backBtn = new TextButton("Back", skin);
 
-
-        ruleBtn.addListener(new ClickListener() {
+        startBtn.addListener(new ClickListener() {
             @Override public void clicked(InputEvent event, float x, float y) {
-                game.startGame(new AiConfig(AgentType.RULE_BASED, 0));
-            }
-        });
-
-        mctsBtn.addListener(new ClickListener() {
-            @Override public void clicked(InputEvent event, float x, float y) {
-                game.setScreen(new DifficultySelectScreen(game, AgentType.MCTS));
-            }
-        });
-
-        minimaxBtn.addListener(new ClickListener() {
-            @Override public void clicked(InputEvent event, float x, float y) {
-                game.setScreen(new DifficultySelectScreen(game, AgentType.MINIMAX));
-            }
-        });
-
-        annBtn.addListener(new ClickListener() {
-            @Override public void clicked(InputEvent event, float x, float y) {
-                game.setScreen(new AnnConfigScreen(game));
-            }
-        });
-
-        hybridBtn.addListener(new ClickListener() {
-            @Override public void clicked(InputEvent event, float x, float y) {
-                game.startGame(new AiConfig(AgentType.HYBRID, 0)); // no difficulty needed
+                String w = weightsField.getText().trim();
+                String t = thrField.getText().trim();
+                if (w.isEmpty()) {
+                    w = "core/src/main/java/io/github/cantstop/model/ai/AI_ANN/ann_weights_mcts.annw";
+                }
+                float thr = 0.45f;
+                try { thr = Float.parseFloat(t); } catch (Exception ignored) {}
+                game.startGame(new AiConfig(AgentType.ANN, 0, w, thr));
             }
         });
 
         backBtn.addListener(new ClickListener() {
             @Override public void clicked(InputEvent event, float x, float y) {
-                game.setScreen(new ModeSelectScreen(game));
+                game.setScreen(new AiSelectScreen(game));
             }
         });
 
@@ -89,11 +72,15 @@ public class AiSelectScreen implements Screen {
         table.center();
 
         table.add(title).padBottom(40).row();
-        table.add(ruleBtn).size(220, 60).padBottom(20).row();
-        table.add(mctsBtn).size(220, 60).padBottom(20).row();
-        table.add(minimaxBtn).size(220, 60).padBottom(60).row();
-        table.add(annBtn).size(220, 60).padBottom(20).row();
-        table.add(hybridBtn).size(220, 60).padBottom(60).row();
+        table.add(weightsLabel).left().padBottom(10);
+        table.row();
+        table.add(weightsField).width(400).padBottom(20);
+        table.row();
+        table.add(thrLabel).left().padBottom(10);
+        table.row();
+        table.add(thrField).width(200).padBottom(30);
+        table.row();
+        table.add(startBtn).size(220, 60).padBottom(20).row();
         table.add(backBtn).size(220, 60).padBottom(20).row();
 
         stage.addActor(table);
@@ -121,22 +108,9 @@ public class AiSelectScreen implements Screen {
         stage.draw();
     }
 
-    @Override public void resize(int width, int height) {
-        stage.getViewport().update(width, height, true);
-    }
-    @Override public void pause() {
-
-    }
-    @Override public void resume() {
-
-    }
-    @Override public void hide() {
-
-    }
-
-    @Override
-    public void dispose() {
-        stage.dispose();
-        background.dispose();
-    }
+    @Override public void resize(int width, int height) { stage.getViewport().update(width, height, true); }
+    @Override public void pause() {}
+    @Override public void resume() {}
+    @Override public void hide() {}
+    @Override public void dispose() { stage.dispose(); background.dispose(); }
 }

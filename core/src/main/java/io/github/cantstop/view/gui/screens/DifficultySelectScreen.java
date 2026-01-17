@@ -34,6 +34,11 @@ public class DifficultySelectScreen implements Screen {
 
     @Override
     public void show() {
+        if (agentType == AgentType.ANN || agentType == AgentType.HYBRID) {
+            // No difficulty selection needed; start immediately
+            game.startGame(new AiConfig(agentType, 0));
+            return;
+        }
         stage = new Stage(new ScreenViewport());
         Gdx.input.setInputProcessor(stage);
 

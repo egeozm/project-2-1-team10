@@ -18,12 +18,16 @@ import io.github.cantstop.view.gui.*;
 import io.github.cantstop.view.gui.PostProcessor;
 import io.github.cantstop.view.gui.AiConfig;
 import io.github.cantstop.view.gui.AgentType;
+import io.github.cantstop.model.ai.AI_ANN.AnnPlayer;
+import io.github.cantstop.model.ai.Hybrid_Model.HybridModel;
 
 import java.util.*;
+import java.io.File;
 
 public class PlayScreen implements Screen {
 
     private final Main game;
+    @SuppressWarnings("unused")
     private final AiConfig config;
 
     // Backend game model
@@ -51,6 +55,8 @@ public class PlayScreen implements Screen {
     private TextButton rollButton;
     private TextButton stopButton;
     private TextButton menuButton;
+    // moveButtons kept for potential UI extensions; currently cleared each update.
+    @SuppressWarnings("unused")
     private final List<TextButton> moveButtons = new ArrayList<>();
     public BitmapFont font;
     public BitmapFont buttonFont;
@@ -59,6 +65,8 @@ public class PlayScreen implements Screen {
     private float shaderTime = 0f;
 
     private boolean waitingForAnimation = false;
+    // gameOver flag reserved for future use (e.g., disabling inputs).
+    @SuppressWarnings("unused")
     private boolean gameOver = false;
 
     public PlayScreen(Main game) {
@@ -174,6 +182,8 @@ public class PlayScreen implements Screen {
 
         AgentType type = config.type();
         int timeMs = config.timeMs();
+        String annW = config.annWeights();
+        float annThr = config.annThreshold();
 
         switch (type) {
 
@@ -204,9 +214,21 @@ public class PlayScreen implements Screen {
                 return new io.github.cantstop.controller.MctsControllerAdapter(mcts);
             }
 
-            case MINIMAX -> {
+            case MINIMAX, MINIMAX_ITERATIVE -> {
                 // adapter for expectiminimax like the one we use for mcts?
                 throw new IllegalStateException("minimax adapter ");
+            }
+
+            case ANN -> {
+                String defaultWeights = annW != null && !annW.isBlank()
+                    ? annW
+                    : "core/src/main/java/io/github/cantstop/model/ai/AI_ANN/ann_weights_mcts.annw";
+                float thr = (annThr > 0f && annThr < 1f) ? annThr : 0.45f;
+                return new AnnPlayer(new File(defaultWeights), thr);
+            }
+
+            case HYBRID -> {
+                return new HybridModel(); // implements IPlayerController
             }
         }
 

@@ -55,16 +55,19 @@ public final class SimulationBatchAllAgents {
 
         Stats agg = new Stats();
         int total = Math.min(games, SEED_COUNT);
+        int half = total / 2;
 
         for (int i = 0; i < total; i++) {
             long seed = seeds[i];
-            AgentSpec aSpec = run.agentA();
-            AgentSpec bSpec = run.agentB();
+            boolean swap = i >= half;
+            AgentSpec aSpec = swap ? run.agentB() : run.agentA();
+            AgentSpec bSpec = swap ? run.agentA() : run.agentB();
 
             Random diceRng = new Random(seed);
             GameState state = GameState.initialize(Player.RED);
             GameResult r = playSingleGame(state, aSpec, bSpec, diceRng);
-            boolean aWon = (r.winner() == Player.RED);
+            boolean redIsA = !swap;
+            boolean aWon = (r.winner() == Player.RED && redIsA) || (r.winner() == Player.BLUE && !redIsA);
             agg.add(r, aWon);
         }
 
