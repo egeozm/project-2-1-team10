@@ -84,6 +84,7 @@ public final class SimulationBatchAllAgents {
         int actions = 0;
         int bustsA = 0;
         int bustsB = 0;
+        int stopDecisions = 0;
         int rollDecisionsA = 0;
         int rollDecisionsB = 0;
         final int MAX_ACTIONS = 4000;
@@ -99,6 +100,7 @@ public final class SimulationBatchAllAgents {
                     TurnManager.stop(s);
                     s.setLastRoll(null);
                     actions++;
+                    stopDecisions++;
                     continue;
                 }
 
@@ -128,8 +130,8 @@ public final class SimulationBatchAllAgents {
         }
 
         Player winner = TurnManager.checkWinCondition(s, Player.RED) ? Player.RED : Player.BLUE;
-        double bustsPerTurnA = rollDecisionsA == 0 ? 0.0 : (double) bustsA / rollDecisionsA;
-        double bustsPerTurnB = rollDecisionsB == 0 ? 0.0 : (double) bustsB / rollDecisionsB;
+        double bustsPerTurnA = (double) bustsA / (bustsA + stopDecisions);
+        double bustsPerTurnB = (double) bustsB / (bustsB + stopDecisions);
         return new GameResult(winner, actions, bustsPerTurnA, bustsPerTurnB);
     }
 
