@@ -82,9 +82,10 @@ public final class SimulationBatchAllAgents {
         IPlayerController red = aSpec.controller(Player.RED);
         IPlayerController blue = bSpec.controller(Player.BLUE);
         int actions = 0;
-        int busts = 0;
-        int rollDecisions = 0;
-        int stopDecisions = 0;
+        int bustsA = 0;
+        int bustsB = 0;
+        int rollDecisionsA = 0;
+        int rollDecisionsB = 0;
         final int MAX_ACTIONS = 4000;
 
         while (!TurnManager.checkWinCondition(s, Player.RED) && !TurnManager.checkWinCondition(s, Player.BLUE)) {
@@ -92,13 +93,12 @@ public final class SimulationBatchAllAgents {
             IPlayerController ctl = isRed ? red : blue;
 
             if (s.getTurnPhase() == TurnPhase.ROLL_OR_STOP) {
-                rollDecisions++;
+                if (isRed) rollDecisionsA++; else rollDecisionsB++;
                 Boolean roll = ctl.rollOrStop(s);
                 if (roll == null || !roll) {
                     TurnManager.stop(s);
                     s.setLastRoll(null);
                     actions++;
-                    stopDecisions++;
                     continue;
                 }
 
@@ -109,7 +109,7 @@ public final class SimulationBatchAllAgents {
                     TurnManager.bust(s);
                     s.setLastRoll(null);
                     actions++;
-                    busts++;
+                    if (isRed) bustsA++; else bustsB++;
                     continue;
                 }
                 TurnManager.noBust(s);
@@ -128,11 +128,12 @@ public final class SimulationBatchAllAgents {
         }
 
         Player winner = TurnManager.checkWinCondition(s, Player.RED) ? Player.RED : Player.BLUE;
-        double bustsPerTurn = (double) busts / (busts + stopDecisions);
-        return new GameResult(winner, actions, bustsPerTurn);
+        double bustsPerTurnA = rollDecisionsA == 0 ? 0.0 : (double) bustsA / rollDecisionsA;
+        double bustsPerTurnB = rollDecisionsB == 0 ? 0.0 : (double) bustsB / rollDecisionsB;
+        return new GameResult(winner, actions, bustsPerTurnA, bustsPerTurnB);
     }
 
-    private record GameResult(Player winner, int actions, double bustsPerTurn) {}
+    private record GameResult(Player winner, int actions, double bustsPerTurnA, double bustsPerTurnB) {}
 
     // ----------------------------------------------------------------------
     // Agent factory
@@ -254,12 +255,14 @@ public final class SimulationBatchAllAgents {
         int aWins = 0;
         int bWins = 0;
         long totalActions = 0;
-        List<Double> bustsPerTurn = new ArrayList<>();
+        List<Double> bustsPerTurnA = new ArrayList<>();
+        List<Double> bustsPerTurnB = new ArrayList<>();
 
         void add(GameResult r, boolean aWon) {
             if (aWon) aWins++; else bWins++;
             totalActions += r.actions();
-            bustsPerTurn.add(r.bustsPerTurn());
+            bustsPerTurnA.add(r.bustsPerTurnA());
+            bustsPerTurnB.add(r.bustsPerTurnB());
         }
 
         double winRate() {
@@ -272,22 +275,40 @@ public final class SimulationBatchAllAgents {
             return games == 0 ? 0.0 : (double) totalActions / games;
         }
 
-        double meanBustsPerTurn() {
-            if (bustsPerTurn.isEmpty()) return 0.0;
+        double meanBustsPerTurnA() {
+            if (bustsPerTurnA.isEmpty()) return 0.0;
             double sum = 0;
-            for (double v : bustsPerTurn) sum += v;
-            return sum / bustsPerTurn.size();
+            for (double v : bustsPerTurnA) sum += v;
+            return sum / bustsPerTurnA.size();
         }
 
-        double varBustsPerTurn() {
-            if (bustsPerTurn.size() <= 1) return 0.0;
-            double m = meanBustsPerTurn();
+        double varBustsPerTurnA() {
+            if (bustsPerTurnA.size() <= 1) return 0.0;
+            double m = meanBustsPerTurnA();
             double sum = 0;
-            for (double v : bustsPerTurn) {
+            for (double v : bustsPerTurnA) {
                 double d = v - m;
                 sum += d * d;
             }
-            return sum / (bustsPerTurn.size() - 1);
+            return sum / (bustsPerTurnA.size() - 1);
+        }
+
+        double meanBustsPerTurnB() {
+            if (bustsPerTurnB.isEmpty()) return 0.0;
+            double sum = 0;
+            for (double v : bustsPerTurnB) sum += v;
+            return sum / bustsPerTurnB.size();
+        }
+
+        double varBustsPerTurnB() {
+            if (bustsPerTurnB.size() <= 1) return 0.0;
+            double m = meanBustsPerTurnB();
+            double sum = 0;
+            for (double v : bustsPerTurnB) {
+                double d = v - m;
+                sum += d * d;
+            }
+            return sum / (bustsPerTurnB.size() - 1);
         }
     }
 
@@ -309,7 +330,8 @@ public final class SimulationBatchAllAgents {
             games, run.agentAName(), s.aWins, run.agentBName(), s.bWins);
         System.out.printf("Win rate for %s: %.3f%n", run.agentAName(), s.winRate());
         System.out.printf("Avg actions per game: %.2f%n", s.avgActions());
-        System.out.printf("Busts/turn mean: %.4f var: %.6f%n", s.meanBustsPerTurn(), s.varBustsPerTurn());
+        System.out.printf("Busts/turn mean (A): %.4f var: %.6f%n", s.meanBustsPerTurnA(), s.varBustsPerTurnA());
+        System.out.printf("Busts/turn mean (B): %.4f var: %.6f%n", s.meanBustsPerTurnB(), s.varBustsPerTurnB());
         System.out.printf("Config: agentA=%s agentB=%s seedBase=%d%n",
             run.agentAName(), run.agentBName(), run.baseSeed());
     }
@@ -377,12 +399,12 @@ public final class SimulationBatchAllAgents {
             case "hybrid" -> AgentSpec.hybrid();
             case "ann" -> {
                 String w = promptString(sc, "ANN weights path", "core/src/main/java/io/github/cantstop/model/ai/AI_ANN/ann_weights_mcts.annw");
-                float thr = (float) promptDouble(sc, "ANN roll threshold (default 0.45)", 0.45);
+                float thr = (float) promptDouble(sc, "ANN roll threshold (default 0.55)", 0.55);
                 yield AgentSpec.ann(w, thr);
             }
             default -> {
                 String w = promptString(sc, "ANN weights path", "core/src/main/java/io/github/cantstop/model/ai/AI_ANN/ann_weights_mcts.annw");
-                float thr = (float) promptDouble(sc, "ANN roll threshold (default 0.45)", 0.45);
+                float thr = (float) promptDouble(sc, "ANN roll threshold (default 0.55)", 0.55);
                 yield AgentSpec.ann(w, thr);
             }
         };
