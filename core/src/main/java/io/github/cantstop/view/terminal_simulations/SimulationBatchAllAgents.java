@@ -68,7 +68,9 @@ public final class SimulationBatchAllAgents {
             GameResult r = playSingleGame(state, aSpec, bSpec, diceRng);
             boolean redIsA = !swap;
             boolean aWon = (r.winner() == Player.RED && redIsA) || (r.winner() == Player.BLUE && !redIsA);
-            agg.add(r, aWon);
+            double bustA = redIsA ? r.redBustsPerTurn() : r.blueBustsPerTurn();
+            double bustB = redIsA ? r.blueBustsPerTurn() : r.redBustsPerTurn();
+            agg.add(r.actions(), bustA, bustB, aWon);
         }
 
         printSummary(run, total, agg);
@@ -84,9 +86,9 @@ public final class SimulationBatchAllAgents {
         int actions = 0;
         int bustsA = 0;
         int bustsB = 0;
-        int stopDecisions = 0;
-        int rollDecisionsA = 0;
-        int rollDecisionsB = 0;
+        int turnsA = 0;
+        int turnsB = 0;
+        Player lastTurnPlayer = null;
         final int MAX_ACTIONS = 4000;
 
         while (!TurnManager.checkWinCondition(s, Player.RED) && !TurnManager.checkWinCondition(s, Player.BLUE)) {
@@ -94,13 +96,15 @@ public final class SimulationBatchAllAgents {
             IPlayerController ctl = isRed ? red : blue;
 
             if (s.getTurnPhase() == TurnPhase.ROLL_OR_STOP) {
-                if (isRed) rollDecisionsA++; else rollDecisionsB++;
+                if (lastTurnPlayer == null || s.getCurrentPlayer() != lastTurnPlayer) {
+                    if (isRed) turnsA++; else turnsB++;
+                    lastTurnPlayer = s.getCurrentPlayer();
+                }
                 Boolean roll = ctl.rollOrStop(s);
                 if (roll == null || !roll) {
                     TurnManager.stop(s);
                     s.setLastRoll(null);
                     actions++;
-                    stopDecisions++;
                     continue;
                 }
 
@@ -130,12 +134,12 @@ public final class SimulationBatchAllAgents {
         }
 
         Player winner = TurnManager.checkWinCondition(s, Player.RED) ? Player.RED : Player.BLUE;
-        double bustsPerTurnA = (double) bustsA / (bustsA + stopDecisions);
-        double bustsPerTurnB = (double) bustsB / (bustsB + stopDecisions);
-        return new GameResult(winner, actions, bustsPerTurnA, bustsPerTurnB);
+        double redBustPerTurn = turnsA == 0 ? 0.0 : (double) bustsA / turnsA;
+        double blueBustPerTurn = turnsB == 0 ? 0.0 : (double) bustsB / turnsB;
+        return new GameResult(winner, actions, redBustPerTurn, blueBustPerTurn);
     }
 
-    private record GameResult(Player winner, int actions, double bustsPerTurnA, double bustsPerTurnB) {}
+    private record GameResult(Player winner, int actions, double redBustsPerTurn, double blueBustsPerTurn) {}
 
     // ----------------------------------------------------------------------
     // Agent factory
@@ -260,11 +264,11 @@ public final class SimulationBatchAllAgents {
         List<Double> bustsPerTurnA = new ArrayList<>();
         List<Double> bustsPerTurnB = new ArrayList<>();
 
-        void add(GameResult r, boolean aWon) {
+        void add(int actions, double bustsA, double bustsB, boolean aWon) {
             if (aWon) aWins++; else bWins++;
-            totalActions += r.actions();
-            bustsPerTurnA.add(r.bustsPerTurnA());
-            bustsPerTurnB.add(r.bustsPerTurnB());
+            totalActions += actions;
+            bustsPerTurnA.add(bustsA);
+            bustsPerTurnB.add(bustsB);
         }
 
         double winRate() {
