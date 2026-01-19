@@ -27,10 +27,10 @@ void main() {
     // ----------------------------------
     vec4 colour = vec4(0.0);
 
-    for (int x = 0; x < 3; x++) {
+    for (int x = 0; x < 5; x++) {
         float offset = float(x) * pixel_size.x / 8.0;
-        colour += (1.0 / 6.0) * texture2D(u_texture, uv + vec2( offset, 0.0));
-        colour += (1.0 / 6.0) * texture2D(u_texture, uv + vec2(-offset, 0.0));
+        colour += (1.0 / 10.0) * texture2D(u_texture, uv + vec2( offset, 0.0));
+        colour += (1.0 / 10.0) * texture2D(u_texture, uv + vec2(-offset, 0.0));
     }
 
     // ----------------------------------

@@ -1,5 +1,6 @@
 package io.github.cantstop.view.gui.screens;
 
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
@@ -92,9 +93,9 @@ public class AiSelectScreen extends BaseScreen {
         if (game.assets.menuBackground != null) {
             float stageWidth = game.viewport.getWorldWidth();
             float stageHeight = game.viewport.getWorldHeight();
-            game.batch.draw(game.assets.menuBackground,
-                    0, 0,
-                    stageWidth, stageHeight);
+            game.batch.setColor(0.6f, 0.6f, 0.7f, 1f); // apply dimming
+            game.batch.draw(game.assets.menuBackground, 0, 0, stageWidth, stageHeight);
+            game.batch.setColor(Color.WHITE);
         }
     }
 }

@@ -40,7 +40,7 @@ public class PopupRenderer {
     public void draw() {
         if (message == null) return;
 
-        font.setColor(GuiConstants.textColor.cpy().mul(1.6f));
+        font.setColor(GuiConstants.textColor);
         font.getData().setScale(6f);
 
         // Split the message into lines
