@@ -1,204 +1,157 @@
 package io.github.cantstop.view.gui.screens;
 
-import com.badlogic.gdx.Screen;
-import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
-import com.badlogic.gdx.scenes.scene2d.Stage;
-import com.badlogic.gdx.scenes.scene2d.ui.*;
-import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
-import com.badlogic.gdx.utils.viewport.ScreenViewport;
-import io.github.cantstop.view.gui.ButtonStyle;
-import io.github.cantstop.view.gui.Main;
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.Texture;
-import io.github.cantstop.view.gui.SharedSkin;
 import com.badlogic.gdx.scenes.scene2d.ui.CheckBox;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.ui.Slider;
+import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import io.github.cantstop.view.gui.ButtonStyle;
+import io.github.cantstop.view.gui.GuiConstants;
+import io.github.cantstop.view.gui.Main;
 
+public class SettingsScreen extends BaseScreen {
 
-public class SettingsScreen implements Screen {
-    private Main game;
-    private Stage stage;
-    private Texture background;
     private Table content;
-    private BitmapFont menuFont;
-    private TextButton.TextButtonStyle borderStyle;
+    private CheckBox.CheckBoxStyle checkBoxStyle;
+    private Slider.SliderStyle sliderStyle;
 
     public SettingsScreen(Main game) {
-        this.game = game;
-        this.stage = new Stage(new ScreenViewport());
+        super(game);
     }
+
     @Override
     public void show() {
-        Gdx.input.setInputProcessor(stage);
-        Skin skin = SharedSkin.getSkin();
-        background = new Texture(Gdx.files.internal("backgrounds/settingsBackground.png"));
+        super.show();
 
-        FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/pixel_font.ttf"));
-        FreeTypeFontGenerator.FreeTypeFontParameter params = new FreeTypeFontGenerator.FreeTypeFontParameter();
-        params.size = 18;
-        params.mono = true;
-        params.minFilter = Texture.TextureFilter.Nearest;
-        params.magFilter = Texture.TextureFilter.Nearest;
+        checkBoxStyle = ButtonStyle.createCheckBoxStyle(font);
+        sliderStyle = ButtonStyle.createSliderStyle();
 
-        menuFont = generator.generateFont(params);
-        generator.dispose();
+        // Main Layout
+        Table root = new Table();
+        root.setFillParent(true);
+        stage.addActor(root);
 
-        borderStyle = ButtonStyle.createBorderButtonStyle(menuFont);
-        borderStyle.fontColor = com.badlogic.gdx.graphics.Color.WHITE;
-        borderStyle.overFontColor = com.badlogic.gdx.graphics.Color.WHITE;
-        borderStyle.downFontColor = com.badlogic.gdx.graphics.Color.WHITE;
+        // Header Title
+        Label title = new Label("Settings", new Label.LabelStyle(buttonFont, GuiConstants.textColor));
+        title.setFontScale(1.5f);
+        root.add(title).padTop(20).padBottom(20).colspan(3).row();
 
-        content = new Table();
-        content.setFillParent(true);
-        content.top().padTop(200).padRight(300); //idk why it s inversed
-
-
-        Label label = new Label("what do u expect bro", SharedSkin.getSkin() , "default");
-        label.setPosition(200, 300);
-
-        TextButton backButton = new TextButton("Back", borderStyle);
-        TextButton savesettingsButton = new TextButton("Save settings", borderStyle);
-
-        savesettingsButton.getLabel().setFontScale(0.4f);
-
-        Table table2 = new Table();
-        table2.setFillParent(true);
-        table2.bottom().right();
-
-        table2.add(backButton).size(200, 60).pad(10);
-
-        Table table3 = new Table();
-        table3.setFillParent(true);
-        table3.bottom().left();
-
-        table3.add(savesettingsButton).size(200, 60).pad(10);
-
-
-
-        TextButton audioButton = new TextButton("Audio", borderStyle);
+        // Navigation Buttons (General, Audio, Visuals)
+        Table navTable = new Table();
         TextButton generalButton = new TextButton("General", borderStyle);
+        TextButton audioButton = new TextButton("Audio", borderStyle);
         TextButton visualsButton = new TextButton("Visuals", borderStyle);
-        //maybe for visuals we can add colorblind mode or sum which technically it is really easy to do we just change the colors for the board/pawns
-        //or maybe create more board designs if we have time
-        //or different pawn designs or sum
 
-        Table table = new Table();
-        table.setFillParent(true);
-        table.top();
+        navTable.add(generalButton).size(100, 30).pad(5);
+        navTable.add(audioButton).size(100, 30).pad(5);
+        navTable.add(visualsButton).size(100, 30).pad(5);
 
-        table.add(label).padBottom(50).row();
-        table.add(generalButton).size(200,60).pad(20);
-        table.add(audioButton).size(200,60).pad(20);
-        table.add(visualsButton).size(200,60).pad(20);
+        root.add(navTable).padBottom(20).colspan(3).row();
 
+        // Content Area
+        content = new Table();
+        root.add(content).grow().colspan(3).row();
+
+        // Footer Buttons (Save, Back)
+        Table footerTable = new Table();
+        TextButton saveButton = new TextButton("Save", borderStyle); // "Save settings" was too long for button?
+        TextButton backButton = new TextButton("Back", borderStyle);
+
+        saveButton.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                // Save logic here (placeholder)
+            }
+        });
 
         backButton.addListener(new ClickListener() {
+            @Override
             public void clicked(InputEvent event, float x, float y) {
                 game.setScreen(new MenuScreen(game));
             }
         });
+
+        footerTable.add(saveButton).size(100, 30).pad(10);
+        footerTable.add(backButton).size(100, 30).pad(10);
+
+        root.add(footerTable).bottom().padBottom(10).colspan(3);
+
+        // Listeners for Nav
         generalButton.addListener(new ClickListener() {
+            @Override
             public void clicked(InputEvent event, float x, float y) {
-                content.clear();
-
-                content.add(new Label("Language", skin ,"big")).left();
-                content.row().padTop(50);
-
-                content.add(new Label("Reset to default settings", skin , "big")).left();
-                CheckBox resetDefSettingsCheck = new CheckBox("" , skin);
-                content.add(resetDefSettingsCheck).left().padLeft(20);
-
+                showGeneral();
             }
         });
 
         audioButton.addListener(new ClickListener() {
+            @Override
             public void clicked(InputEvent event, float x, float y) {
-                content.clear();
-
-                content.add(new Label("Music volume", skin ,"big")).left();
-                content.row().padTop(50);
-                Slider musicSlider = new Slider(0,100,0.5f,false,skin);
-                content.add(musicSlider).width(200);
-                content.row().padTop(50);
-
-                content.add(new Label("Sound Effects Volume", skin , "big")).left();
-                content.row().padTop(50);
-                Slider sfxSlider = new Slider(0,100,0.5f,false,skin);
-                content.add(sfxSlider).width(200);
-                content.row().padTop(50);
-
-                content.add(new Label("Mute all", skin , "big")).left();
-                CheckBox muteAllCheck = new CheckBox("", skin );
-                content.add(muteAllCheck).left();
-                content.row();
-
+                showAudio();
             }
         });
 
         visualsButton.addListener(new ClickListener() {
+            @Override
             public void clicked(InputEvent event, float x, float y) {
-                content.clear();
-
-                content.add(new Label("Music volume", skin ,"big")).left();
-                content.row().padTop(50);
-                Slider musicSlider = new Slider(0,100,0.5f,false,skin);
-                content.add(musicSlider).width(200);
-                content.row().padTop(50);
-
-                content.add(new Label("Sound Effects Volume", skin , "big")).left();
-                content.row().padTop(50);
-                Slider sfxSlider = new Slider(0,100,0.5f,false,skin);
-                content.add(sfxSlider).width(200);
-
+                showVisuals();
             }
         });
 
-        stage.addActor(table);
-        stage.addActor(table2);
-        stage.addActor(table3);
-        stage.addActor(content);
+        // Default view
+        showGeneral();
+    }
+
+    private void showGeneral() {
+        content.clear();
+        Label.LabelStyle labelStyle = new Label.LabelStyle(buttonFont, GuiConstants.textColor);
+
+        content.add(new Label("Language", labelStyle)).left().padBottom(10).row();
+        content.add(new Label("(English only for now)", new Label.LabelStyle(font, GuiConstants.textColor))).left()
+                .padBottom(20).row();
+
+        content.add(new Label("Reset defaults", labelStyle)).left().padBottom(5);
+        CheckBox resetCheck = new CheckBox("", checkBoxStyle);
+        content.add(resetCheck).left().padLeft(10).row();
+    }
+
+    private void showAudio() {
+        content.clear();
+
+        Label.LabelStyle headerStyle = new Label.LabelStyle(buttonFont, GuiConstants.textColor);
+
+        content.add(new Label("Music Volume", headerStyle)).left().padBottom(5).row();
+        Slider musicSlider = new Slider(0, 100, 1, false, sliderStyle);
+        musicSlider.setValue(50);
+        content.add(musicSlider).width(200).left().padBottom(20).row();
+
+        content.add(new Label("SFX Volume", headerStyle)).left().padBottom(5).row();
+        Slider sfxSlider = new Slider(0, 100, 1, false, sliderStyle);
+        sfxSlider.setValue(50);
+        content.add(sfxSlider).width(200).left().padBottom(20).row();
+
+        content.add(new Label("Mute All", headerStyle)).left();
+        CheckBox muteCheck = new CheckBox("", checkBoxStyle);
+        content.add(muteCheck).left().padLeft(10).row();
+    }
+
+    private void showVisuals() {
+        content.clear();
+        Label.LabelStyle headerStyle = new Label.LabelStyle(buttonFont, GuiConstants.textColor);
+        content.add(new Label("Visual Settings", headerStyle)).left().padBottom(20).row();
+        content.add(new Label("Coming soon...", new Label.LabelStyle(font, GuiConstants.textColor))).left();
     }
 
     @Override
-    public void render(float delta) {
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-        game.batch.setShader(null);
-
-        float screenWidth = Gdx.graphics.getWidth();
-        float screenHeight = Gdx.graphics.getHeight();
-
-        // Scale to fill the screen proportionally (may crop edges)
-        float scale = Math.max(screenWidth / background.getWidth(), screenHeight / background.getHeight());
-        float drawWidth = background.getWidth() * scale;
-        float drawHeight = background.getHeight() * scale;
-        float x = (screenWidth - drawWidth) / 2f;
-        float y = (screenHeight - drawHeight) / 2f;
-
-        game.batch.setProjectionMatrix(stage.getCamera().combined);
-        game.batch.begin();
-        game.batch.draw(background, x, y, drawWidth, drawHeight);
-        game.batch.end();
-
-        stage.act(delta);
-        stage.draw();
-    }
-
-    @Override public void resize(int width, int height) {
-        stage.getViewport().update(width, height, true);
-        if(width <= 0 || height <= 0) return;
-    }
-
-    @Override public void pause() {}
-
-    @Override public void resume() {}
-
-    @Override public void hide() {}
-
-    @Override public void dispose() {
-        stage.dispose();
-        background.dispose();
+    protected void renderScreenContent(float delta) {
+        if (game.assets.settingsBackground != null) {
+            float stageWidth = game.viewport.getWorldWidth();
+            float stageHeight = game.viewport.getWorldHeight();
+            game.batch.draw(game.assets.settingsBackground,
+                    0, 0,
+                    stageWidth, stageHeight);
+        }
     }
 }
-

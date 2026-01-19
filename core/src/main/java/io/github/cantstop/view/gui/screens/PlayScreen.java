@@ -1,34 +1,26 @@
 package io.github.cantstop.view.gui.screens;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
-import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Timer;
-
 import io.github.cantstop.controller.*;
 import io.github.cantstop.model.*;
-import io.github.cantstop.model.ai.AI_MCTS.MCTSPlayer;
-import io.github.cantstop.view.gui.*;
-import io.github.cantstop.view.gui.PostProcessor;
-import io.github.cantstop.view.gui.AiConfig;
-import io.github.cantstop.view.gui.AgentType;
 import io.github.cantstop.model.ai.AI_ANN.AnnPlayer;
+import io.github.cantstop.model.ai.AI_MCTS.MCTSPlayer;
 import io.github.cantstop.model.ai.Hybrid_Model.HybridModel;
+import io.github.cantstop.view.gui.*;
 
-import com.badlogic.gdx.audio.Sound;
-
-import java.util.*;
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
-public class PlayScreen implements Screen {
+public class PlayScreen extends BaseScreen {
 
-    private final Main game;
     @SuppressWarnings("unused")
     private final AiConfig config;
 
@@ -39,9 +31,7 @@ public class PlayScreen implements Screen {
     private IPlayerController playerRed;
     private IPlayerController playerBlue;
 
-    // RNG split:
-    // - diceRng: ONLY for dice rolls in real game (GameController)
-    // - aiRng: ONLY for AI randomness (rollouts, tie-breaks, etc.)
+    // RNG split
     private final Random diceRng = new Random();
     private final Random aiRng = new Random();
 
@@ -51,23 +41,14 @@ public class PlayScreen implements Screen {
     private MoveButtonRenderer moveButtonRenderer;
     private boolean vsAI;
 
-    // UI
-    private Stage stage;
-    private TextButton.TextButtonStyle borderStyle;
+    // UI (Buttons are managed here, Stage is in BaseScreen)
     private TextButton rollButton;
     private TextButton stopButton;
     private TextButton menuButton;
-    // moveButtons kept for potential UI extensions; currently cleared each update.
     @SuppressWarnings("unused")
     private final List<TextButton> moveButtons = new ArrayList<>();
-    public BitmapFont font;
-    public BitmapFont buttonFont;
-
-    private PostProcessor postProcessor;
-    private float shaderTime = 0f;
 
     private boolean waitingForAnimation = false;
-    // gameOver flag reserved for future use (e.g., disabling inputs).
     @SuppressWarnings("unused")
     private boolean gameOver = false;
 
@@ -76,88 +57,45 @@ public class PlayScreen implements Screen {
     private Sound winSound;
 
     public PlayScreen(Main game) {
-        this(game, null); // pvp
+        this(game, null);
     }
 
     public PlayScreen(Main game, AiConfig config) {
-
-        this.game = game;
+        super(game);
         this.config = config;
-
         this.vsAI = (config != null);
 
-        // ----------------------------------
         // initialize backend
-        // ----------------------------------
-
         gameState = GameState.initialize(Player.BLUE);
         humanController = new HumanController();
-
         playerBlue = humanController;
 
         if (vsAI) {
-
-            // “research-like” params (you can later wire these to settings)
-            // int maxIters = 1_000_000;
-            // long timeMs = 50; // GUI-friendly (20–100ms); use 200ms only if you accept
-            // lag
-            // int rolloutMax = 10;
-            // double C = 0.35;
-            // double dpwK = 25.0;
-            // double dpwAlpha = 0.5;
-
-            // MCTSPlayer mcts = new MCTSPlayer(
-            // aiRng, maxIters, C, rolloutMax, dpwK, dpwAlpha, timeMs
-            // );
-
-            // playerRed = new MctsControllerAdapter(mcts);
             playerRed = buildAiController(config);
-
         } else {
             playerRed = humanController;
         }
 
-        // IMPORTANT: pass diceRng to GameController (dice only)
         controller = new GameController(gameState, playerRed, playerBlue, diceRng);
 
-        // ----------------------------------
-        // initialize frontend
-        // ----------------------------------
+        // Sounds
+        diceRollSound = Gdx.audio.newSound(Gdx.files.internal("music/dice.mp3"));
+        winSound = Gdx.audio.newSound(Gdx.files.internal("music/win.wav"));
+        bustSound = Gdx.audio.newSound(Gdx.files.internal("music/bust.mp3"));
+    }
 
-        // initialize font
-        FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/pixel_font.ttf"));
+    @Override
+    public void show() {
+        super.show(); // initializes stage, fonts, postProcessor
 
-        FreeTypeFontGenerator.FreeTypeFontParameter params = new FreeTypeFontGenerator.FreeTypeFontParameter();
-
-        params.size = 8; // recommended sizes are 12 and 24
-        params.mono = true;
-        params.minFilter = Texture.TextureFilter.Nearest;
-        params.magFilter = Texture.TextureFilter.Nearest;
-        params.genMipMaps = false;
-        params.kerning = false;
-        params.borderWidth = 0;
-        params.shadowOffsetX = 0;
-        params.shadowOffsetY = 0;
-
-        font = generator.generateFont(params);
-
-        params.size = 16;
-        buttonFont = generator.generateFont(params);
-
-        generator.dispose();
-
-        borderStyle = ButtonStyle.createBorderButtonStyle(buttonFont);
-
+        // initialize renderers using BaseScreen's font/stage
         boardRenderer = new BoardRenderer(gameState, game.batch, font, game.assets);
         diceRenderer = new DiceRenderer(gameState, game.batch, game.assets);
         popupRenderer = new PopupRenderer(game.batch, font);
         moveButtonRenderer = new MoveButtonRenderer(gameState, this);
 
-        postProcessor = new PostProcessor(game.batch, game.viewport);
-
         // create buttons
         rollButton = new TextButton("Roll", borderStyle);
-        rollButton.padTop(20f);
         rollButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
@@ -166,7 +104,6 @@ public class PlayScreen implements Screen {
         });
 
         stopButton = new TextButton("Stop", borderStyle);
-        stopButton.padTop(20f);
         stopButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
@@ -175,7 +112,6 @@ public class PlayScreen implements Screen {
         });
 
         menuButton = new TextButton("Menu", borderStyle);
-        menuButton.padTop(20f);
         menuButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
@@ -183,24 +119,28 @@ public class PlayScreen implements Screen {
             }
         });
 
-        diceRollSound = Gdx.audio.newSound(Gdx.files.internal("music/dice.mp3"));
-        winSound = Gdx.audio.newSound(Gdx.files.internal("music/win.wav"));
-        bustSound = Gdx.audio.newSound(Gdx.files.internal("music/bust.mp3"));
+        // Add to stage
+        rollButton.setBounds(440, 80, 100, 40);
+        stopButton.setBounds(440, 30, 100, 40);
+        menuButton.setBounds(10, 280, 70, 30);
+
+        stage.addActor(menuButton);
+        stage.addActor(rollButton);
+        stage.addActor(stopButton);
+
+        stopButton.setVisible(false);
     }
 
     private IPlayerController buildAiController(AiConfig config) {
-
         AgentType type = config.type();
         int timeMs = config.timeMs();
         String annW = config.annWeights();
         float annThr = config.annThreshold();
 
         switch (type) {
-
             case RULE_BASED -> {
                 return new io.github.cantstop.model.ai.RuleBasedPlayer(aiRng, 9f, 1f);
             }
-
             case MCTS -> {
                 int maxIters = 1_000_000;
                 int rolloutMax = 10;
@@ -217,65 +157,37 @@ public class PlayScreen implements Screen {
                 } else { // EASY
                     rolloutMax = 8;
                 }
-
-                MCTSPlayer mcts = new MCTSPlayer(
-                        aiRng, maxIters, C, rolloutMax, dpwK, dpwAlpha, timeMs);
-
+                MCTSPlayer mcts = new MCTSPlayer(aiRng, maxIters, C, rolloutMax, dpwK, dpwAlpha, timeMs);
                 return new io.github.cantstop.controller.MctsControllerAdapter(mcts);
             }
-
             case MINIMAX, MINIMAX_ITERATIVE -> {
-                // adapter for expectiminimax like the one we use for mcts?
                 throw new IllegalStateException("minimax adapter ");
             }
-
             case ANN -> {
                 String defaultWeights = annW != null && !annW.isBlank()
-                    ? annW
-                    : "core/src/main/java/io/github/cantstop/model/ai/AI_ANN/ann_weights_mcts.annw";
+                        ? annW
+                        : "core/src/main/java/io/github/cantstop/model/ai/AI_ANN/ann_weights_mcts.annw";
                 float thr = (annThr > 0f && annThr < 1f) ? annThr : 0.45f;
                 System.out.println("[GUI] ANN weights=" + defaultWeights + " thr=" + thr);
                 return new AnnPlayer(new File(defaultWeights), thr);
             }
-
             case HYBRID -> {
-                return new HybridModel(); // implements IPlayerController
+                return new HybridModel();
             }
         }
-
         throw new IllegalStateException("Unk AgentType: " + type);
     }
 
-    @Override
-    public void show() {
-
-        stage = new Stage(game.viewport);
-        Gdx.input.setInputProcessor(stage);
-
-        rollButton.setBounds(440, 80, 100, 40); // x, y, width, height
-        stopButton.setBounds(440, 30, 100, 40); // x, y, width, height
-        menuButton.setBounds(10, 280, 70, 30); // x, y, width, height
-
-        stage.addActor(menuButton);
-        stage.addActor(rollButton);
-        stage.addActor(stopButton);
-
-        stopButton.setVisible(false);
-    }
-
-    // triggered when roll button is clicked
     public void handleRollInput() {
         humanController.chooseRoll();
         advanceGame();
     }
 
-    // triggered when stop button is clicked
     public void handleStopInput() {
         humanController.chooseStop();
         advanceGame();
     }
 
-    // triggered when a move button is clicked
     public void handleMoveInput(Move selectedMove) {
         humanController.chooseMove(selectedMove);
         advanceGame();
@@ -284,46 +196,38 @@ public class PlayScreen implements Screen {
     private void advanceGame() {
         if (waitingForAnimation)
             return;
-
         Event event = controller.update();
         handleEvent(event);
     }
 
     private void handleEvent(Event event) {
-
         moveButtonRenderer.clearMoveButtons();
         stopButton.setVisible(false);
         rollButton.setVisible(false);
 
         if (event instanceof WaitForInputEvent) {
-
             if (gameState.getTurnPhase() == TurnPhase.CHOOSE_MOVE) {
-
                 moveButtonRenderer.showMoveButtons(TurnManager.getLegalMoves(gameState, gameState.getLastRoll()),
                         stage);
-
             } else {
                 boolean canStop = gameState.countActiveColumns() > 0;
                 stopButton.setVisible(canStop);
                 rollButton.setVisible(true);
             }
-
             return;
         }
 
         waitingForAnimation = true;
-
-        if (event instanceof RollEvent roll) {
+        if (event instanceof RollEvent roll)
             playAnimationFor(roll, () -> commit(event));
-        } else if (event instanceof StopEvent stop) {
+        else if (event instanceof StopEvent stop)
             playAnimationFor(stop, () -> commit(event));
-        } else if (event instanceof MoveEvent move) {
+        else if (event instanceof MoveEvent move)
             playAnimationFor(move, () -> commit(event));
-        } else if (event instanceof GameOverEvent gameOver) {
+        else if (event instanceof GameOverEvent gameOver)
             playAnimationFor(gameOver, () -> commit(event));
-        } else {
+        else
             throw new IllegalStateException("Unhandled event: " + event);
-        }
     }
 
     private void commit(Event event) {
@@ -333,87 +237,57 @@ public class PlayScreen implements Screen {
     }
 
     private void playAnimationFor(RollEvent event, Runnable onDone) {
-
         diceRenderer.rollAnimation(1.03f);
-        if (diceRollSound != null) {
+        if (diceRollSound != null)
             diceRollSound.play(0.7f);
-        }
 
         Timer.schedule(new Timer.Task() {
             @Override
             public void run() {
-
                 if (event.isBust()) {
-                    if (bustSound != null) {
+                    if (bustSound != null)
                         bustSound.play(0.8f);
-                    }
-
                     popupRenderer.showPopup(gameState.getCurrentPlayer() + "\nBUSTED", 1.4f);
                     Timer.schedule(new Timer.Task() {
                         @Override
                         public void run() {
-
                             onDone.run();
                         }
                     }, 1.4f);
                 } else {
                     onDone.run();
                 }
-
             }
         }, 1f);
     }
 
     private void playAnimationFor(StopEvent event, Runnable onDone) {
-
-        // diceRenderer.stopAnimation(1f);
-
         Timer.schedule(new Timer.Task() {
             @Override
             public void run() {
-
                 onDone.run();
-
             }
         }, 0.3f);
     }
 
     private void playAnimationFor(MoveEvent event, Runnable onDone) {
-
-        // diceRenderer.MoveAnimation(1f);
-
         Timer.schedule(new Timer.Task() {
             @Override
             public void run() {
-
                 onDone.run();
-
             }
         }, 0.3f);
     }
 
     private void playAnimationFor(GameOverEvent event, Runnable onDone) {
-
-        if (winSound != null) {
+        if (winSound != null)
             winSound.play(0.9f);
-        }
-
         popupRenderer.showPopup(event.getWinner() + "\nWINS", 5f);
-
     }
 
     @Override
-    public void render(float delta) {
-
-        shaderTime += delta;
-
-        game.viewport.apply();
-
-        postProcessor.begin();
-
-        game.batch.setProjectionMatrix(game.viewport.getCamera().combined);
-        game.batch.begin();
-
+    protected void renderScreenContent(float delta) {
+        // BaseScreen has already begun the batch
         boardRenderer.drawBoard();
         boardRenderer.drawMarkersEtc();
         boardRenderer.drawColumnNumbers();
@@ -422,43 +296,17 @@ public class PlayScreen implements Screen {
         diceRenderer.draw();
         popupRenderer.update(delta);
         popupRenderer.draw();
-
-        game.batch.end();
-
-        stage.act(delta);
-        stage.draw();
-
-        postProcessor.end(shaderTime, game.viewport);
-    }
-
-    @Override
-    public void resize(int width, int height) {
-        game.viewport.update(width, height, true);
-        stage.getViewport().update(width, height, true);
-    }
-
-    @Override
-    public void pause() {
-    }
-
-    @Override
-    public void resume() {
-    }
-
-    @Override
-    public void hide() {
     }
 
     @Override
     public void dispose() {
-        stage.dispose();
-        font.dispose();
-        // postProcessor.dispose();
-        if (game.assets != null) {
-            game.assets.dispose();
-        }
-        if (diceRollSound != null) diceRollSound.dispose();
-        if (winSound != null) winSound.dispose();
-        if (bustSound != null) bustSound.dispose();
+        super.dispose(); // disposes stage, fonts, postProcessor
+        // game.assets.dispose(); // Handled by Main
+        if (diceRollSound != null)
+            diceRollSound.dispose();
+        if (winSound != null)
+            winSound.dispose();
+        if (bustSound != null)
+            bustSound.dispose();
     }
 }
