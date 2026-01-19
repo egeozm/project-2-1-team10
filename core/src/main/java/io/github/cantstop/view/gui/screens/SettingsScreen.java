@@ -1,11 +1,14 @@
 package io.github.cantstop.view.gui.screens;
 
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.*;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
+import io.github.cantstop.view.gui.ButtonStyle;
 import io.github.cantstop.view.gui.Main;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
@@ -19,6 +22,8 @@ public class SettingsScreen implements Screen {
     private Stage stage;
     private Texture background;
     private Table content;
+    private BitmapFont menuFont;
+    private TextButton.TextButtonStyle borderStyle;
 
     public SettingsScreen(Main game) {
         this.game = game;
@@ -30,6 +35,21 @@ public class SettingsScreen implements Screen {
         Skin skin = SharedSkin.getSkin();
         background = new Texture(Gdx.files.internal("backgrounds/settingsBackground.png"));
 
+        FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/pixel_font.ttf"));
+        FreeTypeFontGenerator.FreeTypeFontParameter params = new FreeTypeFontGenerator.FreeTypeFontParameter();
+        params.size = 18;
+        params.mono = true;
+        params.minFilter = Texture.TextureFilter.Nearest;
+        params.magFilter = Texture.TextureFilter.Nearest;
+
+        menuFont = generator.generateFont(params);
+        generator.dispose();
+
+        borderStyle = ButtonStyle.createBorderButtonStyle(menuFont);
+        borderStyle.fontColor = com.badlogic.gdx.graphics.Color.WHITE;
+        borderStyle.overFontColor = com.badlogic.gdx.graphics.Color.WHITE;
+        borderStyle.downFontColor = com.badlogic.gdx.graphics.Color.WHITE;
+
         content = new Table();
         content.setFillParent(true);
         content.top().padTop(200).padRight(300); //idk why it s inversed
@@ -38,8 +58,8 @@ public class SettingsScreen implements Screen {
         Label label = new Label("what do u expect bro", SharedSkin.getSkin() , "default");
         label.setPosition(200, 300);
 
-        TextButton backButton = new TextButton("Back", skin);
-        TextButton savesettingsButton = new TextButton("Save settings", skin);
+        TextButton backButton = new TextButton("Back", borderStyle);
+        TextButton savesettingsButton = new TextButton("Save settings", borderStyle);
 
         savesettingsButton.getLabel().setFontScale(0.4f);
 
@@ -57,9 +77,9 @@ public class SettingsScreen implements Screen {
 
 
 
-        TextButton audioButton = new TextButton("Audio", skin);
-        TextButton generalButton = new TextButton("General", skin);
-        TextButton visualsButton = new TextButton("Visuals", skin);
+        TextButton audioButton = new TextButton("Audio", borderStyle);
+        TextButton generalButton = new TextButton("General", borderStyle);
+        TextButton visualsButton = new TextButton("Visuals", borderStyle);
         //maybe for visuals we can add colorblind mode or sum which technically it is really easy to do we just change the colors for the board/pawns
         //or maybe create more board designs if we have time
         //or different pawn designs or sum
@@ -144,6 +164,7 @@ public class SettingsScreen implements Screen {
     @Override
     public void render(float delta) {
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+        game.batch.setShader(null);
 
         float screenWidth = Gdx.graphics.getWidth();
         float screenHeight = Gdx.graphics.getHeight();

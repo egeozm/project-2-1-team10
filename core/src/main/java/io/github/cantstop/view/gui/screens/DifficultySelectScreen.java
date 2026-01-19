@@ -4,6 +4,8 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
@@ -13,10 +15,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 
-import io.github.cantstop.view.gui.AiConfig;
-import io.github.cantstop.view.gui.AgentType;
-import io.github.cantstop.view.gui.Main;
-import io.github.cantstop.view.gui.SharedSkin;
+import io.github.cantstop.view.gui.*;
 
 public class DifficultySelectScreen implements Screen {
 
@@ -26,6 +25,9 @@ public class DifficultySelectScreen implements Screen {
     private Stage stage;
     private Skin skin;
     private Texture background;
+
+    private BitmapFont menuFont;
+    private TextButton.TextButtonStyle borderStyle;
 
     public DifficultySelectScreen(Main game, AgentType agentType) {
         this.game = game;
@@ -45,13 +47,34 @@ public class DifficultySelectScreen implements Screen {
         skin = SharedSkin.getSkin();
         background = new Texture(Gdx.files.internal("backgrounds/menuBackground.png"));
 
+        FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/pixel_font.ttf"));
+        FreeTypeFontGenerator.FreeTypeFontParameter params = new FreeTypeFontGenerator.FreeTypeFontParameter();
+
+        params.size = 18;
+        params.mono = true;
+        params.minFilter = Texture.TextureFilter.Nearest;
+        params.magFilter = Texture.TextureFilter.Nearest;
+        params.genMipMaps = false;
+        params.kerning = false;
+        params.borderWidth = 0;
+        params.shadowOffsetX = 0;
+        params.shadowOffsetY = 0;
+
+        menuFont = generator.generateFont(params);
+        generator.dispose();
+
+        borderStyle = ButtonStyle.createBorderButtonStyle(menuFont);
+        borderStyle.fontColor = com.badlogic.gdx.graphics.Color.WHITE;
+        borderStyle.overFontColor = com.badlogic.gdx.graphics.Color.WHITE;
+        borderStyle.downFontColor = com.badlogic.gdx.graphics.Color.WHITE;
+
         Label title = new Label("Select Difficulty", skin, "big");
         title.setFontScale(0.8f);
 
-        TextButton easyBtn = new TextButton("Easy", skin);
-        TextButton mediumBtn = new TextButton("Medium", skin);
-        TextButton hardBtn = new TextButton("Hard", skin);
-        TextButton backBtn = new TextButton("Back", skin);
+        TextButton easyBtn = new TextButton("Easy", borderStyle);
+        TextButton mediumBtn = new TextButton("Medium", borderStyle);
+        TextButton hardBtn = new TextButton("Hard", borderStyle);
+        TextButton backBtn = new TextButton("Back", borderStyle);
 
         easyBtn.addListener(new ClickListener() {
             @Override public void clicked(InputEvent event, float x, float y) {
@@ -130,5 +153,6 @@ public class DifficultySelectScreen implements Screen {
     public void dispose() {
         stage.dispose();
         background.dispose();
+        if (menuFont != null) menuFont.dispose();
     }
 }

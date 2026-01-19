@@ -21,6 +21,8 @@ import io.github.cantstop.view.gui.AgentType;
 import io.github.cantstop.model.ai.AI_ANN.AnnPlayer;
 import io.github.cantstop.model.ai.Hybrid_Model.HybridModel;
 
+import com.badlogic.gdx.audio.Sound;
+
 import java.util.*;
 import java.io.File;
 
@@ -68,6 +70,10 @@ public class PlayScreen implements Screen {
     // gameOver flag reserved for future use (e.g., disabling inputs).
     @SuppressWarnings("unused")
     private boolean gameOver = false;
+
+    private Sound diceRollSound;
+    private Sound bustSound;
+    private Sound winSound;
 
     public PlayScreen(Main game) {
         this(game, null); // pvp
@@ -176,6 +182,10 @@ public class PlayScreen implements Screen {
                 game.setScreen(new MenuScreen(game));
             }
         });
+
+        diceRollSound = Gdx.audio.newSound(Gdx.files.internal("music/dice.mp3"));
+        winSound = Gdx.audio.newSound(Gdx.files.internal("music/win.wav"));
+        bustSound = Gdx.audio.newSound(Gdx.files.internal("music/bust.mp3"));
     }
 
     private IPlayerController buildAiController(AiConfig config) {
@@ -325,12 +335,19 @@ public class PlayScreen implements Screen {
     private void playAnimationFor(RollEvent event, Runnable onDone) {
 
         diceRenderer.rollAnimation(1.03f);
+        if (diceRollSound != null) {
+            diceRollSound.play(0.7f);
+        }
 
         Timer.schedule(new Timer.Task() {
             @Override
             public void run() {
 
                 if (event.isBust()) {
+                    if (bustSound != null) {
+                        bustSound.play(0.8f);
+                    }
+
                     popupRenderer.showPopup(gameState.getCurrentPlayer() + "\nBUSTED", 1.4f);
                     Timer.schedule(new Timer.Task() {
                         @Override
@@ -376,6 +393,10 @@ public class PlayScreen implements Screen {
     }
 
     private void playAnimationFor(GameOverEvent event, Runnable onDone) {
+
+        if (winSound != null) {
+            winSound.play(0.9f);
+        }
 
         popupRenderer.showPopup(event.getWinner() + "\nWINS", 5f);
 
@@ -436,5 +457,8 @@ public class PlayScreen implements Screen {
         if (game.assets != null) {
             game.assets.dispose();
         }
+        if (diceRollSound != null) diceRollSound.dispose();
+        if (winSound != null) winSound.dispose();
+        if (bustSound != null) bustSound.dispose();
     }
 }

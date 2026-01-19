@@ -4,6 +4,8 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
@@ -13,6 +15,7 @@ import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 
+import io.github.cantstop.view.gui.ButtonStyle;
 import io.github.cantstop.view.gui.Main;
 import io.github.cantstop.view.gui.SharedSkin;
 import io.github.cantstop.view.gui.screens.AiSelectScreen;
@@ -23,6 +26,8 @@ public class ModeSelectScreen implements Screen {
     private Skin skin;
     private final Main game;
     private Texture background;
+    private BitmapFont menuFont;
+    private TextButton.TextButtonStyle borderStyle;
 
     public ModeSelectScreen(Main game) {
         this.game = game;
@@ -35,9 +40,30 @@ public class ModeSelectScreen implements Screen {
         skin = SharedSkin.getSkin();
         background = new Texture(Gdx.files.internal("backgrounds/menuBackground.png"));
 
-        TextButton pvpButton = new TextButton("PvP", skin);
-        TextButton pvaiButton = new TextButton("PvAI", skin);
-        TextButton backButton = new TextButton("Back", skin);
+        FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/pixel_font.ttf"));
+        FreeTypeFontGenerator.FreeTypeFontParameter params = new FreeTypeFontGenerator.FreeTypeFontParameter();
+
+        params.size = 18;
+        params.mono = true;
+        params.minFilter = Texture.TextureFilter.Nearest;
+        params.magFilter = Texture.TextureFilter.Nearest;
+        params.genMipMaps = false;
+        params.kerning = false;
+        params.borderWidth = 0;
+        params.shadowOffsetX = 0;
+        params.shadowOffsetY = 0;
+
+        menuFont = generator.generateFont(params);
+        generator.dispose();
+
+        borderStyle = ButtonStyle.createBorderButtonStyle(menuFont);
+        borderStyle.fontColor = com.badlogic.gdx.graphics.Color.WHITE;
+        borderStyle.overFontColor = com.badlogic.gdx.graphics.Color.WHITE;
+        borderStyle.downFontColor = com.badlogic.gdx.graphics.Color.WHITE;
+
+        TextButton pvpButton = new TextButton("PvP", borderStyle);
+        TextButton pvaiButton = new TextButton("PvAI", borderStyle);
+        TextButton backButton = new TextButton("Back", borderStyle);
 
         pvpButton.addListener(new ClickListener() {
             public void clicked(InputEvent event, float x, float y) {
@@ -96,6 +122,7 @@ public class ModeSelectScreen implements Screen {
     public void dispose() {
         stage.dispose();
         background.dispose();
+        if (menuFont != null) menuFont.dispose();
     }
 
 }

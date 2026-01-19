@@ -5,6 +5,8 @@ import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
 
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
@@ -24,6 +26,8 @@ public class MenuScreen implements Screen {
     private Skin skin;
     private Texture background;
     private Music mainMenuMusic;
+    private BitmapFont menuFont;
+    private TextButton.TextButtonStyle borderStyle;
 
 
 
@@ -39,6 +43,27 @@ public class MenuScreen implements Screen {
         skin = SharedSkin.getSkin();
         background = new Texture(Gdx.files.internal("backgrounds/menuBackground.png"));
 
+        FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/pixel_font.ttf"));
+        FreeTypeFontGenerator.FreeTypeFontParameter params = new FreeTypeFontGenerator.FreeTypeFontParameter();
+
+        params.size = 18;
+        params.mono = true;
+        params.minFilter = Texture.TextureFilter.Nearest;
+        params.magFilter = Texture.TextureFilter.Nearest;
+        params.genMipMaps = false;
+        params.kerning = false;
+        params.borderWidth = 0;
+        params.shadowOffsetX = 0;
+        params.shadowOffsetY = 0;
+
+        menuFont = generator.generateFont(params);
+        generator.dispose();
+
+        borderStyle = ButtonStyle.createBorderButtonStyle(menuFont);
+        borderStyle.fontColor = com.badlogic.gdx.graphics.Color.WHITE;
+        borderStyle.overFontColor = com.badlogic.gdx.graphics.Color.WHITE;
+        borderStyle.downFontColor = com.badlogic.gdx.graphics.Color.WHITE;
+
 
         Label title = new Label("Can't Stop !", skin, "big");
         title.setFontScale(0.8f);
@@ -47,11 +72,11 @@ public class MenuScreen implements Screen {
             stage.getHeight() - 100
         );
 
-        TextButton playButton = new TextButton("Play", skin);
-        TextButton rulesButton = new TextButton("Rules", skin);
-        TextButton settingsButton = new TextButton("Settings", skin);
-        TextButton exitButton = new TextButton("Exit", skin);
-        TextButton helpButton = new TextButton("Help", skin);
+        TextButton playButton = new TextButton("Play", borderStyle);
+        TextButton rulesButton = new TextButton("Rules", borderStyle);
+        TextButton settingsButton = new TextButton("Settings", borderStyle);
+        TextButton exitButton = new TextButton("Exit", borderStyle);
+        TextButton helpButton = new TextButton("Help", borderStyle);
 
 
 
@@ -159,6 +184,6 @@ public class MenuScreen implements Screen {
         stage.dispose();
         skin.dispose();
         background.dispose();
-        // Destroy screen's assets here.
+        if (menuFont != null) menuFont.dispose();
     }
 }
