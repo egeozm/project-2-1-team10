@@ -10,10 +10,9 @@ import java.util.Random;
 public final class SimulationDemoHybrid {
 
     public static void main(String[] args) {
-        // Parameters: 1. Games, 2. Seed, 3. Verbose
-        int games = argOr(args, 0, 30);
+        int games = argOr(args, 0, 1);
         long seed = argOr(args, 1, System.nanoTime());
-        boolean verbose = boolOr(args, 2, false);
+        boolean verbose = boolOr(args, 2, true);
 
         Random diceRng = new Random(seed);
 
