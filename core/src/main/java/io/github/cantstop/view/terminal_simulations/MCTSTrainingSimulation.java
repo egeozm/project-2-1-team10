@@ -16,6 +16,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+// Runs automated self play games between MCTS agents to generate training data for the hybrid agent
+// It records every game state and matches it with the eventual winner
+// Only snapshots of the board are recorded, the dice rolls are not
 public class MCTSTrainingSimulation {
 
     private static final int    MCTS_MAX_ITERS   = 1_000_000;
@@ -25,6 +28,8 @@ public class MCTSTrainingSimulation {
     private static final double MCTS_DPW_K       = 25.0;
     private static final double MCTS_DPW_ALPHA   = 0.5;
 
+    // Entry point that executes a batch of 1000 simulated games (although my IDE crashed before 1000 games)
+    // It uses unique seeds for each game to ensure diverse data samples
     public static void main(String[] args) {
         int totalGames = 1000;
         long baseSeed = System.nanoTime();
@@ -39,6 +44,8 @@ public class MCTSTrainingSimulation {
         System.out.println("Simulation complete");
     }
 
+    // Manages a single game life cycle from initialization to data logging
+    // Records state snapshots and labels them with the final winner for supervised learning
     private static void runSingleTrainingGame(long seed) {
         Random rng = new Random(seed);
         GameState state = GameState.initialize(Player.RED);
@@ -67,6 +74,8 @@ public class MCTSTrainingSimulation {
         }
     }
 
+    // Connects the specialized MCTS decision logic to the standard player controller
+    // Maps MctsAction types to the required game engine outputs
     private static class MctsAdapter implements IPlayerController {
         private final MCTSPlayer mcts;
         public MctsAdapter(MCTSPlayer mcts) { this.mcts = mcts; }

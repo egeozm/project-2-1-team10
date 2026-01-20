@@ -1,5 +1,6 @@
 package io.github.cantstop.model.ai.Hybrid_Model;
 
+// This is a class that was used to test the ANN and MatrixMath while implementing it
 public class TestNetwork {
     public static void main(String[] args) {
         double[] inputs = new double[]{0,1};

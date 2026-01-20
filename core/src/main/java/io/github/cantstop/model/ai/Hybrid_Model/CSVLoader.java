@@ -6,7 +6,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.io.File;
 
+// Utility class for parsing training data
+// Transforms raw CSV game states into feature/target pairs for the ANN
 public class CSVLoader {
+
+    // Reads a CSV file and converts each row into a CSVRow object
+    // Skips headers, extracts the 35 board features and captures the win/loss target
     public static List<CSVRow> load(String fileName) {
         List<CSVRow> data = new ArrayList<>();
 

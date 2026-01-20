@@ -7,6 +7,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+// Converts game states into a numerical format suitable for neural network training
+// It normalizes board progress across 33 columns and tracks player-specific data
+// Each recorded state is labeled with a win/loss result based on the game's outcome
+// The final data is appended to a CSV file to serve as a supervised learning dataset
 public class TrainingDataLoader {
     private static final String FILE_PATH = "core/src/main/java/io/github/cantstop/model/ai/Hybrid_Model/ann_training_data.csv";
 

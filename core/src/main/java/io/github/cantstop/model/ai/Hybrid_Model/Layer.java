@@ -1,5 +1,7 @@
 package io.github.cantstop.model.ai.Hybrid_Model;
 
+// Represents a single fully connected layer in the ANN
+// Handles weight initialisation, signal forward pass and gradient based learning
 public class Layer {
     int numInputs;
     int numNeurons;
@@ -8,6 +10,9 @@ public class Layer {
     double[] lastInputs;
     double[] lastZ;
     double[] lastActivations;
+
+    // Initialises the layer with random weights and small positive biases
+    // Weights are centered around 0 (-0.5 to 0.5) to prevent early saturation
     public Layer(int numInputs, int numNeurons){
         this.numNeurons = numNeurons;
         this.numInputs = numInputs;
@@ -22,6 +27,8 @@ public class Layer {
         }
     }
 
+    // Calculates the layer's output using MatrixMath class
+    // Logic: output = sigmoid( (inputs * weights) + bias )
     public double[] forwardPass(double[] inputs){
         lastInputs = inputs;
         lastZ = MatrixMath.addBias(biases, MatrixMath.dotProduct(inputs, weights));
@@ -29,6 +36,8 @@ public class Layer {
         return lastActivations;
     }
 
+    // Updates weights and biases based on the error received from the next layer
+    // Calculates the local gradient (delta) and returns the error to be passed backwards
     public double[] backpropagate(double[] errorGradient, double learningRate) {
         double[] derivative = MatrixMath.sigmoidDerivative(lastActivations.clone());
         double[] delta = MatrixMath.multiplyElements(errorGradient, derivative);
@@ -45,6 +54,7 @@ public class Layer {
         return nextErrorGradient;
     }
 
+    // Serialises weights and biases into a comma-separated string for file storage
     public String exportLayer() {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < weights.length; i++) {
@@ -63,6 +73,7 @@ public class Layer {
         return sb.toString();
     }
 
+    // Injects externally loaded weights and biases, used when loading the trained model in HybridModel class
     public void importLayer(double[][] newWeights, double[] newBiases) {
         this.weights = newWeights;
         this.biases = newBiases;
